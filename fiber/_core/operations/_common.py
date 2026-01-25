@@ -18,49 +18,41 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import equinox as eqx
+import functools
+
 import jax.numpy as jnp
 from jaxtyping import Array
 
-from ..._linalg import skew3, vex3
-from ..so3._operations import _left_jac_inv as _left_jac_inv_so3
-from ..so3._operations import _logm as _logm_so3
-from ._group import SE3, se3
+from .._linalg import skew3
 
 
-def inv(A):
-    return eqx.tree_at(lambda _A: _A.coordinates, A, jnp.linalg.inv(A.coordinates))
-
-
-def expm(A: se3) -> SE3: ...
-
-
-def logm(A: SE3) -> se3:
-    return se3.from_matrix(_logm(A.coordinates))
-
-
-def adj(g: se3, h: se3) -> se3:
+@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
+def adj(g: Array, h: Array) -> Array:
     return g @ h - h @ g
 
 
-def adj_op(g: se3) -> Array:
-    v, w = g.linear, g.angular
+@functools.partial(jnp.vectorize, signature="(n),(n)->(m,m)")
+def adj_op(v: Array, w: Array) -> Array:
     return jnp.block([[skew3(w), skew3(v)], [jnp.zeros((3, 3)), skew3(w)]])
 
 
-def Adj(g: SE3, h: se3) -> se3:
-    return g @ h @ inv(g)
+@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
+def Adj(g: Array, h: Array) -> Array:
+    return g @ h @ jnp.linalg.inv(g)
 
 
-def Adji(g: SE3, h: se3) -> se3:
-    return inv(g) @ h @ g
+@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
+def Adji(g: Array, h: Array) -> Array:
+    return jnp.linalg.inv(g) @ h @ g
 
 
-def dadj(g: se3, p: Array) -> Array:
-    return adj_op(g) @ p
+@functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
+def dadj(g: Array, p: Array) -> Array:
+    return dadj_op(g) @ p
 
 
-def dadj_op(g: se3) -> Array:
+@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
+def dadj_op(g: Array) -> Array:
     return adj_op(g).T
 
 
@@ -70,10 +62,14 @@ def dAdj(): ...
 def dAdj_op(): ...
 
 
-def dadji(): ...
+@functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
+def dadji(g: Array, p: Array) -> Array:
+    return -dadj(g, p)
 
 
-def dadji_op(): ...
+@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
+def dadji_op(g: Array) -> Array:
+    return -adj_op(g).T
 
 
 def dAdji(): ...
@@ -88,13 +84,7 @@ def rplus(): ...
 def rminus(): ...
 
 
-def dexp(g: se3, h: se3, order: int = 3): ...
+def dexp(g: Array, h: Array, order: int = 3): ...
 
 
-def dlog(order: int = 3): ...
-
-
-def _logm(g: Array) -> Array:
-    t, rot = g[:3, 3], g[:3, :3]
-    w_hat = _logm_so3(rot)
-    return jnp.block([[w_hat, _left_jac_inv_so3(vex3(w_hat)) @ t], [jnp.zeros(4)]])
+def dlog(g: Array, h: Array, order: int = 3): ...

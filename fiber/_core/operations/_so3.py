@@ -2,10 +2,10 @@ import jax
 import jax.numpy as jnp
 from jaxtyping import Array
 
-from ..._linalg import skew3, softnorm
+from .._linalg import skew3, softnorm
 
 
-def _logm(w: Array) -> Array:
+def logm(w: Array) -> Array:
     cos = (jnp.trace(w) - 1) / 2
     cos = jnp.clip(cos, -1, 1)
     theta = jnp.arccos(cos)
@@ -17,7 +17,7 @@ def _logm(w: Array) -> Array:
     )
 
 
-def _left_jac_inv(w: Array) -> Array:
+def left_jac_inv(w: Array) -> Array:
     jac = jnp.eye(3)
     return jax.lax.cond(
         jnp.isclose(softnorm(w), 0.0),

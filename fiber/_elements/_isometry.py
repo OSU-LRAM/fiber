@@ -72,8 +72,8 @@ class Isometry(GroupElement):
         return self.coordinates[..., :3, 3]
 
     @property
-    def rotation(self) -> Array:
-        return self.coordinates[..., :3, :3]
+    def rotation(self) -> R:
+        return R.from_matrix(self.coordinates[..., :3, :3])
 
     def __matmul__(self, other):
         if is_twist(other):

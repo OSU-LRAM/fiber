@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from . import linalg
+from . import linalg, random
 from ._elements import Isometry, Twist, is_isometry, is_twist
 from ._operations import (
     Adj,
@@ -76,4 +76,5 @@ __all__ = [
     "lplus",
     "join_state",
     "split_state",
+    "random",
 ]

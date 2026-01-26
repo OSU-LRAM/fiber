@@ -1,13 +1,12 @@
 import jax.numpy as jnp
+import jax.random as jr
 
 import fiber
-from fiber import Isometry, Twist
+from fiber import Isometry
 
 g = Isometry.from_matrix(jnp.eye(4))
 
-v = Twist.from_vector([1, 2, 3, 4, 5, 6]) * 0.1
+gs, vs = fiber.random.right_gaussian(g, key=jr.key(0))
 
-print(Twist.size)
-print(fiber.logm(fiber.expm(v)))
-
-print(fiber.Adj(g, v))
+print(gs)
+print(vs)

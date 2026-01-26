@@ -29,38 +29,53 @@ from .._elements._twist import _from_vector
 from .._operations import expm
 
 
-def _sample_algebra(key: PRNGKeyArray, num_samples: int | None = None) -> Array:
+def _sample(num_samples: int | None = None, *, key: PRNGKeyArray) -> Array:
     shape = (num_samples,) if num_samples is not None else None
     return jax.random.multivariate_normal(key, jnp.zeros(6), jnp.eye(6), shape)
 
 
 @singledispatch
-def left_gaussian(key, mean, num_samples):
-    return _left_gaussian(key, mean, num_samples)
+def left_gaussian(mean: Array, num_samples: int = 1, *, key):
+    return _left_gaussian(mean, num_samples, key=key)
 
 
 def _left_gaussian(
-    key: PRNGKeyArray, mean: Array, num_samples: int | None = None
+    mean: Array,
+    num_samples: int,
+    *,
+    key: PRNGKeyArray,
 ) -> tuple[Array, Array]:
-    s = _sample_algebra(key, num_samples)
-    gs = jax.vmap(lambda x: mean @ expm(x))(s)
+    s = _sample(num_samples, key=key)
     vs = _from_vector(s)
+    gs = jax.vmap(lambda x: mean @ expm(x))(vs)
     return gs, vs
 
 
-@left_gaussian.register
+@left_gaussian.register  # type: ignore
 def _left_gaussian_type(
-    key: PRNGKeyArray, mean: Isometry, num_samples: int | None = None
+    mean: Isometry, num_samples: int = 1, *, key: PRNGKeyArray
 ) -> tuple[Isometry, Twist]:
-    gs, vs = _left_gaussian(key, mean.coordinates, num_samples)
-    return Isometry.from_matrix(gs), Twist.from_vector(vs)
+    gs, vs = _left_gaussian(mean.coordinates, num_samples, key=key)
+    return Isometry.from_matrix(gs), Twist.from_matrix(vs)
 
 
-@jaxtyped(typechecker=beartype)
-def right_gaussian(
-    key: PRNGKeyArray, mean: Num[Array, "n n"], num_samples: int
-) -> tuple[Num[Array, "m n n"], Num[Array, "m n n"]]:
-    vels = _sample_lie_algebra(key, num_samples)
-    gs = jax.vmap(lambda ξ: jax.scipy.linalg.expm(ξ) @ mean)(vels)
-    g_circs = jax.vmap(to_matrix)(vels)
-    return gs, g_circs
+@singledispatch
+def right_gaussian(mean: Array, num_samples: int = 1, *, key):
+    return _right_gaussian(mean, num_samples, key=key)
+
+
+def _right_gaussian(
+    mean: Array, num_samples: int, *, key: PRNGKeyArray
+) -> tuple[Array, Array]:
+    s = _sample(num_samples, key=key)
+    vs = _from_vector(s)
+    gs = jax.vmap(lambda x: expm(x) @ mean)(vs)
+    return gs, vs
+
+
+@right_gaussian.register  # type: ignore
+def _right_gaussian_type(
+    mean: Isometry, num_samples: int = 1, *, key: PRNGKeyArray
+) -> tuple[Isometry, Twist]:
+    gs, vs = _right_gaussian(mean.coordinates, num_samples, key=key)
+    return Isometry.from_matrix(gs), Twist.from_matrix(vs)

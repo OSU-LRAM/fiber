@@ -15,7 +15,7 @@ pip install https://github.com/OSU-LRAM/fiber.git
 # uv installation
 uv pip install https://github.com/OSU-LRAM/jaxgm.git
 
-# or add to your uv project using,
+# or add to your uv project using
 uv add git+ssh://git@github.com:OSU-LRAM/fiber
 ```
 

@@ -19,18 +19,15 @@
 # THE SOFTWARE.
 
 import functools
-from typing import Sequence
 
 import jax.numpy as jnp
 from jaxtyping import Array, ArrayLike
 
-from .._custom_types import RealScalarLike
+from .._custom_types import Axis, RealScalarLike
 from .._epsilon import ε
 
-_Axis = None | int | Sequence[int]
 
-
-def softnorm(g: ArrayLike, axis: _Axis = None) -> ArrayLike:
+def softnorm(g: ArrayLike, axis: Axis = None) -> ArrayLike:
     return jnp.sqrt(jnp.sum(g**2, axis=axis) + ε)
 
 

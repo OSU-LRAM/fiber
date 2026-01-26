@@ -43,11 +43,15 @@ class Isometry(GroupElement):
         return cls(_from_vector(jnp.asarray(vector)))
 
     @classmethod
-    def from_matrix(cls, matrix: ArrayLike):
-        return cls(_from_matrix(jnp.asarray(matrix)))
+    def from_matrix(cls, matrix: ArrayLike, normalize: bool = True):
+        if normalize:
+            return cls(_from_matrix(jnp.asarray(matrix)))
+        return cls(jnp.asarray(matrix))
 
     @classmethod
-    def unflatten(cls, flat: ArrayLike):
+    def unflatten(cls, flat: ArrayLike, normalize: bool = True):
+        if normalize:
+            return cls(_unflatten_normalized(jnp.asarray(flat)))
         return cls(_unflatten(jnp.asarray(flat)))
 
     def as_matrix(self) -> Array:
@@ -108,10 +112,17 @@ def _from_matrix(matrix: Array) -> Array:
 
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m)")
-def _unflatten(flat: Array) -> Array:
+def _unflatten_normalized(flat: Array) -> Array:
     trans, rot = jnp.split(flat, (3,))
     mat = jnp.block([[rot.reshape((3, 3)), trans.reshape(3, 1)], [jnp.zeros(3), 1]])
     return _from_matrix(mat)
+
+
+@functools.partial(jnp.vectorize, signature="(n)->(m,m)")
+def _unflatten(flat: Array) -> Array:
+    trans, rot = jnp.split(flat, (3,))
+    mat = jnp.block([[rot.reshape((3, 3)), trans.reshape(3, 1)], [jnp.zeros(3), 1]])
+    return mat
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")

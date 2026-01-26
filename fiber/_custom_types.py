@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Sequence
 
 import numpy as np
 from jaxtyping import Array, Bool, Float, Int, Real
@@ -19,3 +19,5 @@ else:
 
 # this matches the numpy `ArrayLike` type
 type ArrayLike = _ArrayLike | Any
+
+Axis = None | int | Sequence[int]

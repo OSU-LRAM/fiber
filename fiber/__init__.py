@@ -44,6 +44,7 @@ from ._operations import (
     rminus,
     rplus,
 )
+from ._utils import join_state, split_state
 
 __all__ = [
     "Twist",
@@ -73,4 +74,6 @@ __all__ = [
     "dlogm",
     "lminus",
     "lplus",
+    "join_state",
+    "split_state",
 ]

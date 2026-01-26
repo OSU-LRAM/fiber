@@ -24,11 +24,10 @@ from functools import singledispatch
 import jax.numpy as jnp
 from jaxtyping import Array
 
-from ._custom_types import Axis
 from ._elements import Isometry, Twist
 
 
-def split_state(x, axis: Axis = None) -> tuple[Isometry, Twist]:
+def split_state(x, axis: int = 0) -> tuple[Isometry, Twist]:
     g, v = jnp.split(x, (Isometry.size,), axis=axis)  # type: ignore
     return Isometry.unflatten(g), Twist.from_vector(v)
 

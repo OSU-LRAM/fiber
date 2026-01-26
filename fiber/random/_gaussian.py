@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 from functools import singledispatch
+from typing import Optional
 
 import jax
 import jax.numpy as jnp
@@ -29,23 +30,26 @@ from .._elements._twist import _from_vector
 from .._operations import expm
 
 
-def _sample(num_samples: int | None = None, *, key: PRNGKeyArray) -> Array:
-    shape = (num_samples,) if num_samples is not None else None
-    return jax.random.multivariate_normal(key, jnp.zeros(6), jnp.eye(6), shape)
+def _sample(num_samples: int, cov: Array, *, key: PRNGKeyArray) -> Array:
+    return jax.random.multivariate_normal(key, jnp.zeros(6), cov, (num_samples,))
 
 
 @singledispatch
-def left_gaussian(mean: Array, num_samples: int = 1, *, key):
-    return _left_gaussian(mean, num_samples, key=key)
+def left_gaussian(
+    mean: Array, cov: Optional[Array] = None, num_samples: int = 1, *, key
+):
+    cov = cov if cov is not None else jnp.eye(6)
+    return _left_gaussian(mean, cov, num_samples, key=key)
 
 
 def _left_gaussian(
     mean: Array,
+    cov: Array,
     num_samples: int,
     *,
     key: PRNGKeyArray,
 ) -> tuple[Array, Array]:
-    s = _sample(num_samples, key=key)
+    s = _sample(num_samples, cov, key=key)
     vs = _from_vector(s)
     gs = jax.vmap(lambda x: mean @ expm(x))(vs)
     return gs, vs
@@ -53,21 +57,29 @@ def _left_gaussian(
 
 @left_gaussian.register  # type: ignore
 def _left_gaussian_type(
-    mean: Isometry, num_samples: int = 1, *, key: PRNGKeyArray
+    mean: Isometry,
+    cov: Optional[Array] = None,
+    num_samples: int = 1,
+    *,
+    key: PRNGKeyArray,
 ) -> tuple[Isometry, Twist]:
-    gs, vs = _left_gaussian(mean.coordinates, num_samples, key=key)
+    cov = cov if cov is not None else jnp.eye(6)
+    gs, vs = _left_gaussian(mean.coordinates, cov, num_samples, key=key)
     return Isometry.from_matrix(gs), Twist.from_matrix(vs)
 
 
 @singledispatch
-def right_gaussian(mean: Array, num_samples: int = 1, *, key):
-    return _right_gaussian(mean, num_samples, key=key)
+def right_gaussian(
+    mean: Array, cov: Optional[Array] = None, num_samples: int = 1, *, key
+):
+    cov = cov if cov is not None else jnp.eye(6)
+    return _right_gaussian(mean, cov, num_samples, key=key)
 
 
 def _right_gaussian(
-    mean: Array, num_samples: int, *, key: PRNGKeyArray
+    mean: Array, cov: Array, num_samples: int, *, key: PRNGKeyArray
 ) -> tuple[Array, Array]:
-    s = _sample(num_samples, key=key)
+    s = _sample(num_samples, cov, key=key)
     vs = _from_vector(s)
     gs = jax.vmap(lambda x: expm(x) @ mean)(vs)
     return gs, vs
@@ -75,7 +87,12 @@ def _right_gaussian(
 
 @right_gaussian.register  # type: ignore
 def _right_gaussian_type(
-    mean: Isometry, num_samples: int = 1, *, key: PRNGKeyArray
+    mean: Isometry,
+    cov: Optional[Array] = None,
+    num_samples: int = 1,
+    *,
+    key: PRNGKeyArray,
 ) -> tuple[Isometry, Twist]:
-    gs, vs = _right_gaussian(mean.coordinates, num_samples, key=key)
+    cov = cov if cov is not None else jnp.eye(6)
+    gs, vs = _right_gaussian(mean.coordinates, cov, num_samples, key=key)
     return Isometry.from_matrix(gs), Twist.from_matrix(vs)

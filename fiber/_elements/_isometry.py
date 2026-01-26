@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 import functools
-from typing import Any, Sequence
+from typing import Any
 
 import jax.numpy as jnp
 import numpy as np
@@ -27,15 +27,14 @@ from equinox import field
 from jax.scipy.spatial.transform import Rotation as R
 from jaxtyping import Array
 
-from .._custom_types import ArrayLike
+from .._custom_types import ArrayLike, RealScalarLike
 from ..linalg import softnorm
 from ._element import GroupElement
-from ._twist import Twist, is_twist
+from ._twist import Twist, is_algebra_element
 
 
 class Isometry(GroupElement):
     coordinates: Array
-    shape: Sequence[int] = field(static=True, default=(4, 4))
     size: int = field(static=True, default=12)
 
     @classmethod
@@ -75,8 +74,12 @@ class Isometry(GroupElement):
     def rotation(self) -> R:
         return R.from_matrix(self.coordinates[..., :3, :3])
 
+    @property
+    def theta(self) -> Array:
+        return _rotation_angle(self.coordinates[..., :3, :3])
+
     def __matmul__(self, other):
-        if is_twist(other):
+        if is_algebra_element(other):
             return Twist(self.coordinates @ other.coordinates)
         return Isometry(self.coordinates @ other.coordinates)
 
@@ -95,7 +98,7 @@ class Isometry(GroupElement):
         return (Isometry.from_matrix(c) for c in self.coordinates)
 
 
-def is_isometry(value: Any) -> bool:
+def is_group_element(value: Any) -> bool:
     return isinstance(value, Isometry)
 
 
@@ -148,3 +151,11 @@ def _as_vector(matrix: Array) -> Array:
 @functools.partial(jnp.vectorize, signature="(n,n)->(m)")
 def _flatten(matrix: Array) -> Array:
     return jnp.concatenate([matrix[:3, 3], matrix[:3, :3].flatten()])
+
+
+@functools.partial(jnp.vectorize, signature="(n,n)->()")
+def _rotation_angle(matrix: Array) -> RealScalarLike:
+    cos = (jnp.trace(matrix) - 1) / 2
+    cos = jnp.clip(cos, -1, 1)
+    theta = jnp.arccos(cos)
+    return theta

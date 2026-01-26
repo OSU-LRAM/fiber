@@ -19,7 +19,13 @@
 # THE SOFTWARE.
 
 from . import linalg, random
-from ._elements import Isometry, Twist, is_isometry, is_twist
+from ._elements import Isometry, Twist, is_algebra_element, is_group_element
+from ._interpolation import (
+    AugmentedDirectInterpolation,
+    AugmentedGeodesicInterpolation,
+    DirectInterpolation,
+    GeodesicInterpolation,
+)
 from ._operations import (
     Adj,
     Adj_inv,
@@ -38,6 +44,7 @@ from ._operations import (
     dexpm,
     dlogm,
     expm,
+    inv,
     lminus,
     logm,
     lplus,
@@ -49,8 +56,8 @@ from ._utils import join_state, split_state
 __all__ = [
     "Twist",
     "Isometry",
-    "is_isometry",
-    "is_twist",
+    "is_group_element",
+    "is_algebra_element",
     "linalg",
     "Adj",
     "Adj_op",
@@ -77,4 +84,9 @@ __all__ = [
     "join_state",
     "split_state",
     "random",
+    "inv",
+    "DirectInterpolation",
+    "AugmentedDirectInterpolation",
+    "GeodesicInterpolation",
+    "AugmentedGeodesicInterpolation",
 ]

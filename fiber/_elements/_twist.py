@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 import functools
-from typing import Any, Sequence
+from typing import Any
 
 import jax.numpy as jnp
 import numpy as np
@@ -33,7 +33,6 @@ from ._element import GroupElement
 
 class Twist(GroupElement):
     coordinates: Array
-    shape: Sequence[int] = field(static=True, default=(4, 4))
     size: int = field(static=True, default=6)
 
     @classmethod
@@ -73,21 +72,21 @@ class Twist(GroupElement):
         return Twist(self.coordinates @ other.coordinates)
 
     def __add__(self, other):
-        if is_twist(other):
+        if is_algebra_element(other):
             return Twist(self.coordinates + other.coordinates)
         return Twist.from_vector(self.as_vector() + other)
 
     __radd__ = __add__
 
     def __sub__(self, other):
-        if is_twist(other):
+        if is_algebra_element(other):
             return Twist(self.coordinates - other.coordinates)
         return Twist.from_vector(self.as_vector() - other)
 
     __rsub__ = __sub__
 
     def __mul__(self, other):
-        if is_twist(other):
+        if is_algebra_element(other):
             return Twist(self.coordinates * other.coordinates)
         return Twist.from_vector(self.as_vector() * other)
 
@@ -108,7 +107,7 @@ class Twist(GroupElement):
         return (Twist.from_matrix(c) for c in self.coordinates)
 
 
-def is_twist(value: Any) -> bool:
+def is_algebra_element(value: Any) -> bool:
     return isinstance(value, Twist)
 
 

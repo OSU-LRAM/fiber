@@ -30,6 +30,21 @@ from .linalg import skew3, softnorm, vex3
 
 
 @singledispatch
+def inv(g):
+    return _inv(g)
+
+
+@functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
+def _inv(g: Array) -> Array:
+    return jnp.linalg.inv(g)
+
+
+@inv.register
+def _inv_type(g: Isometry) -> Isometry:
+    return Isometry.from_matrix(_inv(g.coordinates))
+
+
+@singledispatch
 def adj(g, h):
     return _adj(g, h)
 

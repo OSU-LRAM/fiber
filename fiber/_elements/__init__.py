@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from ._isometry import Isometry, is_isometry
-from ._twist import Twist, is_twist
+from ._isometry import Isometry, is_group_element
+from ._twist import Twist, is_algebra_element
 
-__all__ = ["Isometry", "is_isometry", "Twist", "is_twist"]
+__all__ = ["Isometry", "is_group_element", "Twist", "is_algebra_element"]

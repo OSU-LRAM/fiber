@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 from abc import abstractmethod
-from typing import Any, Sequence
+from typing import Any
 
 from equinox import AbstractClassVar, AbstractVar, Module
 from jaxtyping import Array
@@ -30,7 +30,6 @@ from .._custom_types import ArrayLike
 class GroupElement(Module):
     coordinates: AbstractVar[Array]
     size: AbstractClassVar[int]
-    shape: AbstractClassVar[Sequence[int]]
 
     @classmethod
     @abstractmethod

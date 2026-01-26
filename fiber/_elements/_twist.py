@@ -22,10 +22,12 @@ import functools
 from typing import Any, Sequence
 
 import jax.numpy as jnp
+import numpy as np
 from equinox import field
-from jaxtyping import Array, ArrayLike
+from jaxtyping import Array
 
-from .._linalg import skew3, vex3
+from .._custom_types import ArrayLike
+from ..linalg import skew3, vex3
 from ._element import GroupElement
 
 

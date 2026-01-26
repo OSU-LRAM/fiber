@@ -25,9 +25,10 @@ import jax.numpy as jnp
 import numpy as np
 from equinox import field
 from jax.scipy.spatial.transform import Rotation as R
-from jaxtyping import Array, ArrayLike
+from jaxtyping import Array
 
-from .._linalg import softnorm
+from .._custom_types import ArrayLike
+from ..linalg import softnorm
 from ._element import GroupElement
 from ._twist import Twist, is_twist
 

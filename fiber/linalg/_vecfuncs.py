@@ -24,8 +24,8 @@ from typing import Sequence
 import jax.numpy as jnp
 from jaxtyping import Array, ArrayLike
 
-from ._custom_types import RealScalarLike
-from ._epsilon import ε
+from .._custom_types import RealScalarLike
+from .._epsilon import ε
 
 _Axis = None | int | Sequence[int]
 
@@ -36,7 +36,7 @@ def softnorm(g: ArrayLike, axis: _Axis = None) -> ArrayLike:
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m)")
 def skew3(x: Array) -> Array:
-    return jnp.array([[0, -x[2], x[1]], [x[2], 0, x[0]], [-x[1], x[0], 0]])
+    return jnp.array([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
 
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m)")

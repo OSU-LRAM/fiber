@@ -18,59 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from . import linalg
-from ._elements import Isometry, Twist, is_isometry, is_twist
-from ._operations import (
-    Adj,
-    Adj_inv,
-    Adj_inv_op,
-    Adj_op,
-    adj,
-    adj_op,
-    dAdj,
-    dadj,
-    dAdj_inv,
-    dadj_inv,
-    dAdj_inv_op,
-    dadj_inv_op,
-    dAdj_op,
-    dadj_op,
-    dexpm,
-    dlogm,
-    expm,
-    lminus,
-    logm,
-    lplus,
-    rminus,
-    rplus,
-)
+from ._isometry import Isometry, is_isometry
+from ._twist import Twist, is_twist
 
-__all__ = [
-    "Twist",
-    "Isometry",
-    "is_isometry",
-    "is_twist",
-    "linalg",
-    "Adj",
-    "Adj_op",
-    "Adj_inv_op",
-    "Adj_inv",
-    "adj",
-    "adj_op",
-    "dAdj",
-    "dadj",
-    "dAdj_op",
-    "dadj_op",
-    "dAdj_inv",
-    "dadj_inv",
-    "dAdj_inv_op",
-    "dadj_inv_op",
-    "rminus",
-    "rplus",
-    "expm",
-    "logm",
-    "dexpm",
-    "dlogm",
-    "lminus",
-    "lplus",
-]
+__all__ = ["Isometry", "is_isometry", "Twist", "is_twist"]

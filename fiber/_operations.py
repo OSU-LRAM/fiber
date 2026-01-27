@@ -82,7 +82,7 @@ def dadj(g, p):
 
 @functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
 def _dadj(g: Array, p: Array) -> Array:
-    return dadj_op(g) @ p
+    return _dadj_op(g) @ p
 
 
 @dadj.register
@@ -97,7 +97,7 @@ def dadj_op(g):
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def _dadj_op(g: Array) -> Array:
-    return adj_op(g).T
+    return _adj_op(g).T
 
 
 @dadj_op.register
@@ -112,7 +112,7 @@ def dadj_inv(g, p):
 
 @functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
 def _dadj_inv(g: Array, p: Array) -> Array:
-    return -dadj(g, p)
+    return -_dadj(g, p)
 
 
 @dadj_inv.register
@@ -127,7 +127,7 @@ def dadj_inv_op(g):
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def _dadj_inv_op(g: Array) -> Array:
-    return -adj_op(g).T
+    return -_adj_op(g).T
 
 
 @dadj_inv_op.register
@@ -188,7 +188,7 @@ def Adj_inv_op(g):
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def _Adj_inv_op(g: Array) -> Array:
-    return Adj_op(jnp.linalg.inv(g))
+    return _Adj_op(jnp.linalg.inv(g))
 
 
 @Adj_inv_op.register
@@ -203,7 +203,7 @@ def dAdj(g, p):
 
 @functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
 def _dAdj(g: Array, p: Array) -> Array:
-    return dAdj_op(g) @ p
+    return _dAdj_op(g) @ p
 
 
 @dAdj.register
@@ -218,7 +218,7 @@ def dAdj_op(g):
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def _dAdj_op(g: Array) -> Array:
-    return Adj_op(jnp.linalg.inv(g)).T
+    return _Adj_op(jnp.linalg.inv(g)).T
 
 
 @dAdj_op.register
@@ -233,7 +233,7 @@ def dAdj_inv(g, p):
 
 @functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
 def _dAdj_inv(g: Array, p: Array) -> Array:
-    return dAdj_inv_op(g) @ p
+    return _dAdj_inv_op(g) @ p
 
 
 @dAdj_inv.register
@@ -248,7 +248,7 @@ def dAdj_inv_op(g):
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def _dAdj_inv_op(g: Array) -> Array:
-    return dAdj_op(jnp.linalg.inv(g))
+    return _dAdj_op(jnp.linalg.inv(g))
 
 
 @dAdj_inv_op.register
@@ -461,7 +461,7 @@ def lplus(g, h):
 
 @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
 def _lplus(g: Array, h: Array) -> Array:
-    return expm(h) @ g
+    return _expm(h) @ g
 
 
 @lplus.register
@@ -476,7 +476,7 @@ def rplus(g, h):
 
 @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
 def _rplus(g: Array, h: Array) -> Array:
-    return g @ expm(h)
+    return g @ _expm(h)
 
 
 @rplus.register
@@ -491,7 +491,7 @@ def lminus(g, h):
 
 @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
 def _lminus(g: Array, h: Array) -> Array:
-    return logm(g @ jnp.linalg.inv(h))
+    return _logm(g @ jnp.linalg.inv(h))
 
 
 @lminus.register
@@ -506,7 +506,7 @@ def rminus(g, h):
 
 @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
 def _rminus(g: Array, h: Array) -> Array:
-    return logm(jnp.linalg.inv(h) @ g)
+    return _logm(jnp.linalg.inv(h) @ g)
 
 
 @rminus.register

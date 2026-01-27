@@ -66,7 +66,7 @@ def adj_op(g):
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def _adj_op(g: Array) -> Array:
-    v, w = g[:3], g[:3, :3]
+    v, w = g[:3, 3], g[:3, :3]
     return jnp.block([[w, skew3(v)], [jnp.zeros((3, 3)), w]])
 
 

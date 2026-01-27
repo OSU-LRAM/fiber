@@ -45,3 +45,9 @@ def _join_state(g: Array, v: Array) -> Array:
 @join_state.register
 def _(g: Isometry, v: Twist) -> Array:
     return _join_state(g.flatten(), v.as_vector())
+
+
+@join_state.register
+def _(g: Twist, v: Twist) -> Array:
+    # this is a special case that shows up in integrators
+    return _join_state(g.flatten(), v.as_vector())

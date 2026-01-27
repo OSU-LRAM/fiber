@@ -119,7 +119,8 @@ def _from_vector(vector: Array) -> Array:
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m)")
 def _unflatten(flat: Array) -> Array:
-    return jnp.block([[flat.reshape(3, 4)], [jnp.zeros((1, 4))]])
+    v, w = jnp.split(flat, (3,))
+    return jnp.block([[w.reshape((3, 3)), v.reshape(3, 1)], [jnp.zeros(4)]])
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m)")
@@ -130,4 +131,4 @@ def _as_vector(matrix: Array) -> Array:
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m)")
 def _flatten(matrix: Array) -> Array:
-    return matrix[:3, :4].flatten()
+    return jnp.concatenate([matrix[:3, 3], matrix[:3, :3].flatten()])

@@ -128,10 +128,12 @@ class AugmentedGeodesicInterpolation(AbstractLocalInterpolation):
         del left
         with jax.numpy_dtype_promotion("standard"):
             if t1 is None:
-                s = jtu.tree_map(split_state, (self.y0, self.y1))
+                s = jtu.tree_map(
+                    lambda x: jnp.split(x, (Isometry.size,)), [self.y0, self.y1]
+                )
                 gs, vs = jtu.tree_transpose(jtu.tree_structure(["*", "*"]), None, s)
-                (g0, g1) = jtu.tree_map(lambda x: x.as_matrix(), gs)
-                (v0, v1) = jtu.tree_map(lambda x: x.as_vector(), vs)
+                (g0, g1) = jtu.tree_map(_unflatten_normalized, gs)
+                (v0, v1) = vs
                 coeff = _linear_rescale(self.t0, t0, self.t1)
                 gi = _glerp(g0, g1, coeff)
                 vi = _lerp(v0, v1, coeff)

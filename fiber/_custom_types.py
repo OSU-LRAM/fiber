@@ -19,5 +19,3 @@ else:
 
 # this matches the numpy `ArrayLike` type
 type ArrayLike = _ArrayLike | Any
-
-Axis = None | int | Sequence[int]

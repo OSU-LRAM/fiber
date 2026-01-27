@@ -28,14 +28,9 @@ from jax.scipy.spatial.transform import Rotation as R
 from jaxtyping import Array, PyTree
 
 from ._custom_types import RealScalarLike
-from ._elements._isometry import (
-    Isometry,
-    _flatten,
-    _normalize_rotation,
-    _unflatten_normalized,
-)
-from ._operations import expm, rminus
-from ._utils import split_state
+from ._elements._isometry import Isometry, _normalize_rotation
+from ._operations import expm, inv, rminus
+from ._utils import join_state, split_state
 
 
 def _linear_rescale(t0, t, t1) -> Array:
@@ -66,7 +61,7 @@ def _slerp(y0: R, y1: R, coeff: RealScalarLike) -> R:
     return R.from_quat(result)
 
 
-def _glerp(y0: Array, y1: Array, coeff: RealScalarLike) -> Array:
+def _glerp(y0: Isometry, y1: Isometry, coeff: RealScalarLike) -> Isometry:
     return y0 @ expm(coeff * rminus(y1, y0))
 
 
@@ -82,16 +77,16 @@ class DirectInterpolation(AbstractLocalInterpolation):
         del left
         with jax.numpy_dtype_promotion("standard"):
             if t1 is None:
-                g0, g1 = jtu.tree_map(Isometry.from_matrix, (self.y0, self.y1))
+                g0, g1 = jtu.tree_map(Isometry.unflatten, (self.y0, self.y1))
                 coeff = _linear_rescale(self.t0, t0, self.t1)
                 pi = _lerp(g0.position, g1.position, coeff)
                 ri = _slerp(g0.rotation, g1.rotation, coeff)
                 ri_norm = _normalize_rotation(ri.as_matrix())
                 return jnp.concatenate([pi, ri_norm.flatten()])
             else:
-                y0, y1 = self.evaluate(t0), self.evaluate(t1)
-                (g0, g1) = jtu.tree_map(_unflatten_normalized, (y0, y1))
-                return _flatten(jnp.linalg.inv(g0) @ g1)
+                ys = jtu.tree_map(self.evaluate, [t0, t1])
+                g0, g1 = jtu.tree_map(Isometry.unflatten, ys)
+                return (inv(g0) @ g1).flatten()
 
 
 class GeodesicInterpolation(AbstractLocalInterpolation):
@@ -106,14 +101,13 @@ class GeodesicInterpolation(AbstractLocalInterpolation):
         del left
         with jax.numpy_dtype_promotion("standard"):
             if t1 is None:
-                (g0, g1) = jtu.tree_map(_unflatten_normalized, (self.y0, self.y1))
+                g0, g1 = jtu.tree_map(Isometry.unflatten, (self.y0, self.y1))
                 coeff = _linear_rescale(self.t0, t0, self.t1)
-                gi = _glerp(g0, g1, coeff)
-                return _flatten(gi)
+                return _glerp(g0, g1, coeff).flatten()
             else:
-                y0, y1 = self.evaluate(t0), self.evaluate(t1)
-                (g0, g1) = jtu.tree_map(_unflatten_normalized, (y0, y1))
-                return _flatten(jnp.linalg.inv(g0) @ g1)
+                ys = jtu.tree_map(self.evaluate, [t0, t1])
+                (g0, g1) = jtu.tree_map(Isometry.unflatten, ys)
+                return (inv(g0) @ g1).flatten()
 
 
 class AugmentedGeodesicInterpolation(AbstractLocalInterpolation):
@@ -128,22 +122,17 @@ class AugmentedGeodesicInterpolation(AbstractLocalInterpolation):
         del left
         with jax.numpy_dtype_promotion("standard"):
             if t1 is None:
-                s = jtu.tree_map(
-                    lambda x: jnp.split(x, (Isometry.size,)), [self.y0, self.y1]
-                )
-                gs, vs = jtu.tree_transpose(jtu.tree_structure(["*", "*"]), None, s)
-                (g0, g1) = jtu.tree_map(_unflatten_normalized, gs)
-                (v0, v1) = vs
+                (g0, v0), (g1, v1) = jtu.tree_map(split_state, [self.y0, self.y1])
                 coeff = _linear_rescale(self.t0, t0, self.t1)
                 gi = _glerp(g0, g1, coeff)
                 vi = _lerp(v0, v1, coeff)
-                return jnp.concatenate([_flatten(gi), vi])
+                return join_state(gi, vi)
             else:
-                y0, y1 = self.evaluate(t0), self.evaluate(t1)
-                (g0, v0), (g1, v1) = jtu.tree_map(split_state, (y0, y1))
-                g_interval = _flatten(jnp.linalg.inv(g0.as_matrix()) @ g1.as_matrix())
-                v_interval = v1.as_vector() - v0.as_vector()
-                return jnp.concatenate([g_interval, v_interval])
+                ys = jtu.tree_map(self.evaluate, [t0, t1])
+                (g0, v0), (g1, v1) = jtu.tree_map(split_state, ys)
+                g_interval = inv(g0) @ g1
+                v_interval = v1 - v0
+                return join_state(g_interval, v_interval)
 
 
 class AugmentedDirectInterpolation(AbstractLocalInterpolation):
@@ -161,13 +150,13 @@ class AugmentedDirectInterpolation(AbstractLocalInterpolation):
                 (g0, v0), (g1, v1) = jtu.tree_map(split_state, (self.y0, self.y1))
                 coeff = _linear_rescale(self.t0, t0, self.t1)
                 pi = _lerp(g0.position, g1.position, coeff)
-                vi = _lerp(v0.as_vector(), v1.as_vector(), coeff)
+                vi = _lerp(v0, v1, coeff).as_vector()  # type: ignore
                 ri = _slerp(g0.rotation, g1.rotation, coeff)
                 ri_norm = _normalize_rotation(ri.as_matrix())
                 return jnp.concatenate([pi, ri_norm.flatten(), vi])
             else:
-                y0, y1 = self.evaluate(t0), self.evaluate(t1)
-                (g0, v0), (g1, v1) = jtu.tree_map(split_state, (y0, y1))
-                g_interval = _flatten(jnp.linalg.inv(g0.as_matrix()) @ g1.as_matrix())
-                v_interval = v1.as_vector() - v0.as_vector()
-                return jnp.concatenate([g_interval, v_interval])
+                ys = jtu.tree_map(self.evaluate, [t0, t1])
+                (g0, v0), (g1, v1) = jtu.tree_map(split_state, ys)
+                g_interval = inv(g0) @ g1
+                v_interval = v1 - v0
+                return join_state(g_interval, v_interval)

@@ -1,6 +1,6 @@
 # fiber
 
-fiber is a JAX library for performing SE(3) operations, targeting geometric mechanics 
+fiber is a JAX library for performing SE(3) operations, targeting geometric mechanics
 applications. Some of the operations implemented include: `expm`, `logm`, `dexpm`,
 `dlogm`, and `adj`.
 
@@ -27,7 +27,7 @@ from fiber import Isometry, Twist
 import jax.numpy as jnp
 
 # construct an SE(3) element and an se(3) element
-# 
+#
 # The `Isometry` and `Twist` classes are PyTrees that support various JAX operations
 # like `vmap`
 g = Isometry.from_matrix(jnp.eye(4))

@@ -28,10 +28,10 @@ from jaxtyping import Array
 
 from .._custom_types import ArrayLike
 from ..linalg import skew3, vex3
-from ._element import GroupElement
+from ._element import Element
 
 
-class Twist(GroupElement):
+class Twist(Element):
     coordinates: Array
     size: int = field(static=True, default=6)
 

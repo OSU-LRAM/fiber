@@ -29,11 +29,11 @@ from jaxtyping import Array
 
 from .._custom_types import ArrayLike, RealScalarLike
 from ..linalg import softnorm
-from ._element import GroupElement
+from ._element import Element
 from ._twist import Twist, is_algebra_element
 
 
-class Isometry(GroupElement):
+class Isometry(Element):
     coordinates: Array
     size: int = field(static=True, default=12)
 

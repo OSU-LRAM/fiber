@@ -27,7 +27,7 @@ from jaxtyping import Array
 from .._custom_types import ArrayLike
 
 
-class GroupElement(Module):
+class Element(Module):
     coordinates: AbstractVar[Array]
     size: AbstractClassVar[int]
 

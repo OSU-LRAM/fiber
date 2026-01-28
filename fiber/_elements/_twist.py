@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 import functools
-from typing import Any
+from typing import Any, Sequence
 
 import jax.numpy as jnp
 import numpy as np
@@ -67,6 +67,17 @@ class Twist(GroupElement):
     @property
     def angular(self) -> Array:
         return vex3(self.coordinates[..., :3, :3])
+
+    @classmethod
+    def pack(cls, elements: Sequence[Twist]):
+        coordinates = jnp.vstack([e.coordinates for e in elements])
+        return cls(coordinates)
+
+    def unpack(self) -> Sequence:
+        if self.single:
+            raise ValueError("Cannot unpack single element.")
+        coordinates = self.coordinates.reshape(-1, 4, 4)
+        return [Twist(c) for c in coordinates]
 
     def __matmul__(self, other):
         return Twist(self.coordinates @ other.coordinates)

@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 import functools
-from typing import Any
+from typing import Any, Sequence
 
 import jax.numpy as jnp
 import numpy as np
@@ -61,6 +61,17 @@ class Isometry(GroupElement):
 
     def flatten(self) -> Array:
         return _flatten(self.coordinates)
+
+    @classmethod
+    def pack(cls, elements: Sequence[Isometry]):
+        coordinates = jnp.vstack([e.coordinates for e in elements])
+        return cls(coordinates)
+
+    def unpack(self) -> Sequence:
+        if self.single:
+            raise ValueError("Cannot unpack single element.")
+        coordinates = self.coordinates.reshape(-1, 4, 4)
+        return [Isometry(c) for c in coordinates]
 
     @classmethod
     def eye(cls):

@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 from abc import abstractmethod
-from typing import Any
+from typing import Any, Sequence
 
 from equinox import AbstractClassVar, AbstractVar, Module
 from jaxtyping import Array
@@ -55,6 +55,13 @@ class GroupElement(Module):
     @classmethod
     @abstractmethod
     def eye(cls) -> Any: ...
+
+    @classmethod
+    @abstractmethod
+    def pack(cls, elements: Sequence) -> Any: ...
+
+    @abstractmethod
+    def unpack(self) -> Any: ...
 
     @property
     def single(self) -> bool:

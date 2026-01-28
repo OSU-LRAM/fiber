@@ -422,9 +422,8 @@ def dlogm(g):
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
-def _dlogm(g: Array) -> Array:
-    W = logm(g)
-    v, w_hat = W[:3, 3], W[:3, :3]
+def _dlogm(A: Array) -> Array:
+    v, w_hat = A[:3, 3], A[:3, :3]
     v_hat, w = skew3(v), vex3(w_hat)
     theta = softnorm(w)
     a = jax.lax.cond(
@@ -450,7 +449,7 @@ def _dlogm(g: Array) -> Array:
 
 
 @dlogm.register
-def _dlogm_type(g: Isometry) -> Array:
+def _dlogm_type(g: Twist) -> Array:
     return _dlogm(g.coordinates)
 
 

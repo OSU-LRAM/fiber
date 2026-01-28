@@ -63,7 +63,7 @@ class Isometry(Element):
         return _flatten(self.coordinates)
 
     @classmethod
-    def pack(cls, elements: Sequence[Isometry]):
+    def pack(cls, elements: Sequence):
         coordinates = jnp.vstack([e.coordinates for e in elements])
         return cls(coordinates)
 

@@ -69,7 +69,7 @@ class Twist(Element):
         return vex3(self.coordinates[..., :3, :3])
 
     @classmethod
-    def pack(cls, elements: Sequence[Twist]):
+    def pack(cls, elements: Sequence):
         coordinates = jnp.vstack([e.coordinates for e in elements])
         return cls(coordinates)
 

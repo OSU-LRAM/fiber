@@ -97,7 +97,7 @@ def dadj_op(g):
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def _dadj_op(g: Array) -> Array:
-    return _adj_op(g).T
+    return -_adj_op(g).T
 
 
 @dadj_op.register

@@ -127,7 +127,7 @@ def dadj_inv_op(g):
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def _dadj_inv_op(g: Array) -> Array:
-    return -_adj_op(g).T
+    return -dadj_op(g)
 
 
 @dadj_inv_op.register

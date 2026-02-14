@@ -34,7 +34,7 @@ def inv(g):
     return _inv(g)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
+@functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def _inv(g: Array) -> Array:
     return jnp.linalg.inv(g)
 
@@ -49,7 +49,7 @@ def adj(g, h):
     return _adj(g, h)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
+@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
 def _adj(g: Array, h: Array) -> Array:
     return g @ h - h @ g
 
@@ -64,7 +64,7 @@ def adj_op(g):
     return _adj_op(g)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
+@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def _adj_op(g: Array) -> Array:
     v, w = g[:3, 3], g[:3, :3]
     return jnp.block([[w, skew3(v)], [jnp.zeros((3, 3)), w]])
@@ -80,7 +80,7 @@ def dadj(g, p):
     return _dadj(g, p)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
+@functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
 def _dadj(g: Array, p: Array) -> Array:
     return _dadj_op(g) @ p
 
@@ -95,7 +95,7 @@ def dadj_op(g):
     return _dadj_op(g)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
+@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def _dadj_op(g: Array) -> Array:
     return -_adj_op(g).T
 
@@ -110,7 +110,7 @@ def dadj_inv(g, p):
     return _dadj_inv(g, p)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
+@functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
 def _dadj_inv(g: Array, p: Array) -> Array:
     return -_dadj(g, p)
 
@@ -125,7 +125,7 @@ def dadj_inv_op(g):
     return _dadj_inv_op(g)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
+@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def _dadj_inv_op(g: Array) -> Array:
     return -dadj_op(g)
 
@@ -140,7 +140,7 @@ def Adj(g, h):
     return _Adj(g, h)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
+@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
 def _Adj(g: Array, h: Array) -> Array:
     return g @ h @ jnp.linalg.inv(g)
 
@@ -155,7 +155,7 @@ def Adj_op(g):
     return _Adj_op(g)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
+@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def _Adj_op(g: Array) -> Array:
     p, rot = g[:3, 3], g[:3, :3]
     return jnp.block([[rot, skew3(p) @ rot], [jnp.zeros_like(rot), rot]])
@@ -171,9 +171,9 @@ def Adj_inv(g, h):
     return _Adj_inv(g, h)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
+@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
 def _Adj_inv(g: Array, h: Array) -> Array:
-    return jnp.linalg.solve(g, h) @ g
+    return jnp.linalg.inv(g) @ h @ g
 
 
 @Adj_inv.register
@@ -186,7 +186,7 @@ def Adj_inv_op(g):
     return _Adj_inv_op(g)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
+@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def _Adj_inv_op(g: Array) -> Array:
     return _Adj_op(jnp.linalg.inv(g))
 
@@ -201,7 +201,7 @@ def dAdj(g, p):
     return _dAdj(g, p)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
+@functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
 def _dAdj(g: Array, p: Array) -> Array:
     return _dAdj_op(g) @ p
 
@@ -216,7 +216,7 @@ def dAdj_op(g):
     return _dAdj_op(g)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
+@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def _dAdj_op(g: Array) -> Array:
     return _Adj_op(jnp.linalg.inv(g)).T
 
@@ -231,7 +231,7 @@ def dAdj_inv(g, p):
     return _dAdj_inv(g, p)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
+@functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
 def _dAdj_inv(g: Array, p: Array) -> Array:
     return _dAdj_inv_op(g) @ p
 
@@ -246,7 +246,7 @@ def dAdj_inv_op(g):
     return _dAdj_inv_op(g)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
+@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def _dAdj_inv_op(g: Array) -> Array:
     return _dAdj_op(jnp.linalg.inv(g))
 
@@ -256,7 +256,7 @@ def _dAdj_inv_op_type(g: Isometry) -> Array:
     return _dAdj_inv_op(g.coordinates)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
+@functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def _so3_expm(w: Array) -> Array:
     theta = softnorm(vex3(w))
     sin = jax.lax.cond(
@@ -272,7 +272,7 @@ def _so3_expm(w: Array) -> Array:
     return jnp.eye(3) + sin * w + cos * (w @ w)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
+@functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def _so3_dexpm(w: Array) -> Array:
     theta = softnorm(vex3(w))
     a = jax.lax.cond(
@@ -294,7 +294,7 @@ def expm(g):
     return _expm(g)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
+@functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def _expm(g: Array) -> Array:
     p, w_hat = g[:3, 3], g[:3, :3]
     theta = softnorm(vex3(w_hat))
@@ -323,7 +323,7 @@ def dexpm(g):
     return _dexpm(g)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
+@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def _dexpm(g: Array) -> Array:
     v, w_hat = g[:3, 3], g[:3, :3]
     v_hat, w = skew3(v), vex3(w_hat)
@@ -354,7 +354,7 @@ def _dexpm_type(g: Twist) -> Array:
     return _dexpm(g.coordinates)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
+@functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def _so3_logm(w: Array) -> Array:
     cos = (jnp.trace(w) - 1) / 2
     cos = jnp.clip(cos, -1, 1)
@@ -372,7 +372,7 @@ def logm(g):
     return _logm(g)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
+@functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def _logm(g: Array) -> Array:
     p, rot = g[:3, 3], g[:3, :3]
     w_hat = _so3_logm(rot)
@@ -399,7 +399,7 @@ def _logm_type(g: Isometry) -> Twist:
     return Twist.from_matrix(_logm(g.coordinates))
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
+@functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def _so3_dlogm(w: Array) -> Array:
     cos = (jnp.trace(w) - 1) / 2
     cos = jnp.clip(cos, -1, 1)
@@ -423,7 +423,7 @@ def dlogm(g):
     return _dlogm(g)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
+@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def _dlogm(A: Array) -> Array:
     v, w_hat = A[:3, 3], A[:3, :3]
     v_hat, w = skew3(v), vex3(w_hat)
@@ -460,7 +460,7 @@ def lplus(g, h):
     return _lplus(g, h)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
+@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
 def _lplus(g: Array, h: Array) -> Array:
     return _expm(h) @ g
 
@@ -475,7 +475,7 @@ def rplus(g, h):
     return _rplus(g, h)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
+@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
 def _rplus(g: Array, h: Array) -> Array:
     return g @ _expm(h)
 
@@ -490,7 +490,7 @@ def lminus(g, h):
     return _lminus(g, h)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
+@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
 def _lminus(g: Array, h: Array) -> Array:
     return _logm(g @ jnp.linalg.inv(h))
 
@@ -505,9 +505,9 @@ def rminus(g, h):
     return _rminus(g, h)
 
 
-# @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
+@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
 def _rminus(g: Array, h: Array) -> Array:
-    return _logm(jnp.linalg.solve(h, g))
+    return _logm(jnp.linalg.inv(h) @ g)
 
 
 @rminus.register

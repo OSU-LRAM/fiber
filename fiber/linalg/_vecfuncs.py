@@ -34,21 +34,21 @@ def softnorm(g: ArrayLike, axis: _Axis = None) -> ArrayLike:
     return jnp.sqrt(jnp.sum(g**2, axis=axis) + ε)
 
 
-@functools.partial(jnp.vectorize, signature="(n)->(m,m)")
+# @functools.partial(jnp.vectorize, signature="(n)->(m,m)")
 def skew3(x: Array) -> Array:
     return jnp.array([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
 
 
-@functools.partial(jnp.vectorize, signature="(n)->(m,m)")
+# @functools.partial(jnp.vectorize, signature="(n)->(m,m)")
 def skew2(x: RealScalarLike) -> Array:
     return jnp.array([[0, -x], [x, 0]])
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(m)")
+# @functools.partial(jnp.vectorize, signature="(n,n)->(m)")
 def vex3(x: Array) -> Array:
     return jnp.array([x[2, 1], x[0, 2], x[1, 0]])
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(m)")
+# @functools.partial(jnp.vectorize, signature="(n,n)->(m)")
 def vex2(x: Array) -> RealScalarLike:
     return jnp.asarray(x[1, 0])

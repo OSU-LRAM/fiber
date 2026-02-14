@@ -26,7 +26,7 @@ import jax.numpy as jnp
 from jaxtyping import Array
 
 from ._elements import Isometry, Twist
-from .linalg import skew3, softnorm, vex3
+from .linalg import skew3, softclip, softnorm, vex3
 
 
 @singledispatch
@@ -357,7 +357,7 @@ def _dexpm_type(g: Twist) -> Array:
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def _so3_logm(w: Array) -> Array:
     cos = (jnp.trace(w) - 1) / 2
-    cos = jnp.clip(cos, -1, 1)
+    cos = softclip(cos, -1, 1)
     theta = jnp.arccos(cos)
     w_hat = jnp.zeros((3, 3))
     return jax.lax.cond(
@@ -402,7 +402,7 @@ def _logm_type(g: Isometry) -> Twist:
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def _so3_dlogm(w: Array) -> Array:
     cos = (jnp.trace(w) - 1) / 2
-    cos = jnp.clip(cos, -1, 1)
+    cos = softclip(cos, -1, 1)
     theta = jnp.arccos(cos)
     a = jax.lax.cond(
         jnp.isclose(theta, 0.0),  # type: ignore

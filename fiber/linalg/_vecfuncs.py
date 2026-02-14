@@ -34,6 +34,10 @@ def softnorm(g: ArrayLike, axis: _Axis = None) -> ArrayLike:
     return jnp.sqrt(jnp.sum(g**2, axis=axis) + ε)
 
 
+def softclip(g: ArrayLike, min: ArrayLike, max: ArrayLike) -> ArrayLike:
+    return jnp.clip(g, min + ε, max - ε)
+
+
 @functools.partial(jnp.vectorize, signature="(n)->(m,m)")
 def skew3(x: Array) -> Array:
     return jnp.array([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])

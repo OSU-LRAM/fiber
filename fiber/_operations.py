@@ -173,7 +173,7 @@ def Adj_inv(g, h):
 
 # @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
 def _Adj_inv(g: Array, h: Array) -> Array:
-    return jnp.linalg.inv(g) @ h @ g
+    return jnp.linalg.solve(g, h) @ g
 
 
 @Adj_inv.register
@@ -507,7 +507,7 @@ def rminus(g, h):
 
 # @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
 def _rminus(g: Array, h: Array) -> Array:
-    return _logm(jnp.linalg.inv(h) @ g)
+    return _logm(jnp.linalg.solve(h, g))
 
 
 @rminus.register

@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 import functools
-from typing import Any, Sequence
+from typing import Any, Sequence, cast
 
 import jax.numpy as jnp
 import numpy as np
@@ -48,6 +48,14 @@ class Isometry(Element):
         return cls(jnp.asarray(matrix))
 
     @classmethod
+    def from_euclidean(cls, vector: ArrayLike, seq: str = "xyz", degrees: bool = False):
+        func = jnp.vectorize(
+            functools.partial(_from_euclidean, seq=seq, degrees=degrees),
+            signature="(n)->(m,m)",
+        )
+        return cls(func(vector))
+
+    @classmethod
     def unflatten(cls, flat: ArrayLike, normalize: bool = True):
         if normalize:
             return cls(_unflatten_normalized(jnp.asarray(flat)))
@@ -58,6 +66,13 @@ class Isometry(Element):
 
     def as_vector(self) -> Array:
         return _as_vector(self.coordinates)
+
+    def as_euclidean(self, seq: str = "xyz", degrees: bool = False) -> Array:
+        func = jnp.vectorize(
+            functools.partial(_as_euclidean, seq=seq, degrees=degrees),
+            signature="(n,n)->(m)",
+        )
+        return func(self.coordinates)
 
     def flatten(self) -> Array:
         return _flatten(self.coordinates)
@@ -125,6 +140,12 @@ def _from_matrix(matrix: Array) -> Array:
     return matrix.at[:3, :3].set(_normalize_rotation(matrix[:3, :3]))
 
 
+def _from_euclidean(vector: Array, seq: str, degrees: bool) -> Array:
+    trans, angles = jnp.split(vector, 2, axis=-1)
+    rot = R.from_euler(seq, angles, degrees).as_matrix()
+    return jnp.block([[rot, trans.reshape(3, 1)], [jnp.zeros(3), 1]])
+
+
 @functools.partial(jnp.vectorize, signature="(n)->(m,m)")
 def _unflatten_normalized(flat: Array) -> Array:
     trans, rot = jnp.split(flat, (3,))
@@ -170,3 +191,9 @@ def _rotation_angle(matrix: Array) -> RealScalarLike:
     cos = jnp.clip(cos, -1, 1)
     theta = jnp.arccos(cos)
     return theta
+
+
+def _as_euclidean(matrix: Array, seq: str, degrees: bool) -> Array:
+    pos = matrix[:3, 3]
+    angles = R.from_matrix(matrix[:3, :3]).as_euler(seq, degrees)
+    return jnp.concatenate([pos, cast(Array, angles)], axis=-1)

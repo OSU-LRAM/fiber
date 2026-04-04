@@ -110,7 +110,7 @@ class GeodesicInterpolation(AbstractLocalInterpolation):
                 return (inv(g0) @ g1).flatten()
 
 
-class AugmentedGeodesicInterpolation(AbstractLocalInterpolation):
+class PartitionedGeodesicInterpolation(AbstractLocalInterpolation):
     t0: RealScalarLike  # type: ignore
     t1: RealScalarLike  # type: ignore
     y0: Array
@@ -135,7 +135,7 @@ class AugmentedGeodesicInterpolation(AbstractLocalInterpolation):
                 return join_state(g_interval, v_interval)
 
 
-class AugmentedDirectInterpolation(AbstractLocalInterpolation):
+class PartitionedDirectInterpolation(AbstractLocalInterpolation):
     t0: RealScalarLike  # type: ignore
     t1: RealScalarLike  # type: ignore
     y0: Array

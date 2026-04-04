@@ -21,10 +21,10 @@
 from . import internal, linalg, random
 from ._elements import Isometry, Twist, is_algebra_element, is_group_element
 from ._interpolation import (
-    AugmentedDirectInterpolation,
-    AugmentedGeodesicInterpolation,
     DirectInterpolation,
     GeodesicInterpolation,
+    PartitionedDirectInterpolation,
+    PartitionedGeodesicInterpolation,
 )
 from ._operations import (
     Adj,
@@ -87,7 +87,7 @@ __all__ = [
     "random",
     "inv",
     "DirectInterpolation",
-    "AugmentedDirectInterpolation",
+    "PartitionedDirectInterpolation",
     "GeodesicInterpolation",
-    "AugmentedGeodesicInterpolation",
+    "PartitionedGeodesicInterpolation",
 ]

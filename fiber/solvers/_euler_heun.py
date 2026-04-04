@@ -27,7 +27,7 @@ from typing_extensions import TypeAlias
 
 from .._custom_types import VF, Args, BoolScalarLike, DenseInfo, RealScalarLike
 from .._elements import Isometry, Twist
-from .._interpolation import PartitionedGeodesicInterpolation
+from .._interpolations._local_interpolation import LocalPartitionedGeodesicInterpolation
 from .._operations import rplus
 from .._utils import join_state, split_state
 
@@ -39,9 +39,9 @@ class EulerHeun(AbstractStratonovichSolver):
     term_structure: ClassVar = MultiTerm[
         tuple[AbstractTerm[Any, RealScalarLike], AbstractTerm]
     ]
-    interpolation_cls: ClassVar[Callable[..., PartitionedGeodesicInterpolation]] = (
-        PartitionedGeodesicInterpolation
-    )
+    interpolation_cls: ClassVar[
+        Callable[..., LocalPartitionedGeodesicInterpolation]
+    ] = LocalPartitionedGeodesicInterpolation
 
     def order(self, terms):
         return 1

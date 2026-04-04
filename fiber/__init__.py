@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from . import internal, linalg, random
+from . import internal, linalg, random, solvers
 from ._elements import Isometry, Twist, is_algebra_element, is_group_element
 from ._interpolation import (
     DirectInterpolation,
@@ -90,4 +90,5 @@ __all__ = [
     "PartitionedDirectInterpolation",
     "GeodesicInterpolation",
     "PartitionedGeodesicInterpolation",
+    "solvers",
 ]

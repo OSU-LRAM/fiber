@@ -116,7 +116,7 @@ def _mean(samples: Array, iters: int) -> Array:
 
     def refine_mean(carry, _):
         mean, gs = carry
-        exp_coords = jax.vmap(lambda g: _as_vector(logm(jnp.linalg.inv(mean) @ g)))(gs)
+        exp_coords = jax.vmap(lambda g: _as_vector(logm(jnp.linalg.solve(mean, g))))(gs)
         exp_mean = jnp.mean(exp_coords, axis=0)
         return (mean @ expm(_from_vector(exp_mean)), gs), None
 
@@ -164,7 +164,7 @@ def cov(samples, mean):
 def _cov(samples: Array, mean: Array) -> Array:
     mean_inv = jnp.linalg.inv(mean)
     ys = jax.vmap(lambda g: _as_vector(logm(mean_inv @ g)))(samples)
-    sigma = jnp.einsum("ni,nj->ij", ys, ys) / len(samples)
+    sigma = jax.lax.div(jnp.einsum("ni,nj->ij", ys, ys), len(samples))
     return sigma
 
 

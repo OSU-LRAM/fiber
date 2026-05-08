@@ -32,7 +32,6 @@ class Element(eqx.Module):
     """Base class for an element (either a group element or tangent vector)."""
 
     coordinates: AbstractVar[Array]
-    dim: AbstractClassVar[int]
     size: AbstractClassVar[int]
 
     @classmethod
@@ -47,7 +46,7 @@ class Element(eqx.Module):
 
     @classmethod
     @abstractmethod
-    def unflatten(cls, flat: ArrayLike): ...
+    def unflatten(cls, flat: ArrayLike) -> Element: ...
 
     @classmethod
     @abstractmethod

@@ -18,71 +18,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import jax
+import jax.numpy as jnp
 
-def inv(): ...
-
-
-def adj(): ...
-
-
-def adj_op(): ...
-
-
-def dadj(): ...
-
-
-def dadj_op(): ...
-
-
-def dadj_inv(): ...
-
-
-def dadj_inv_op(): ...
-
-
-def Adj(): ...
-
-
-def Adj_op(): ...
-
-
-def Adj_inv(): ...
-
-
-def Adj_inv_op(): ...
-
-
-def dAdj(): ...
-
-
-def dAdj_op(): ...
-
-
-def dAdj_inv(): ...
-
-
-def dAdj_inv_op(): ...
-
-
-def expm(): ...
-
-
-def dexpm(): ...
-
-
-def logm(): ...
-
-
-def dlogm(): ...
-
-
-def lplus(): ...
-
-
-def rplus(): ...
-
-
-def lminus(): ...
-
-
-def rminus(): ...
+EPSILON = (
+    jnp.finfo(jnp.float64).eps
+    if jax.config._read("jax_enable_x64")
+    else jnp.finfo(jnp.float32).eps
+)

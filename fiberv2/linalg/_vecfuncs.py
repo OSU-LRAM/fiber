@@ -18,71 +18,41 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import functools
+from collections.abc import Sequence
 
-def inv(): ...
+import jax.numpy as jnp
+from jaxtyping import Array, ArrayLike
 
+from .._custom_types import RealScalarLike
+from .._epsilon import EPSILON
 
-def adj(): ...
-
-
-def adj_op(): ...
-
-
-def dadj(): ...
-
-
-def dadj_op(): ...
+_Axis = None | int | Sequence[int]
 
 
-def dadj_inv(): ...
+def softnorm(g: ArrayLike, axis: _Axis = None) -> ArrayLike:
+    return jnp.sqrt(jnp.sum(g**2, axis=axis) + EPSILON)
 
 
-def dadj_inv_op(): ...
+def softclip(g: ArrayLike, min: ArrayLike, max: ArrayLike) -> ArrayLike:
+    return jnp.clip(g, min + EPSILON, max - EPSILON)
 
 
-def Adj(): ...
+@functools.partial(jnp.vectorize, signature="(n)->(m,m)")
+def skew3(x: Array) -> Array:
+    return jnp.array([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
 
 
-def Adj_op(): ...
+@functools.partial(jnp.vectorize, signature="(n)->(m,m)")
+def skew2(x: RealScalarLike) -> Array:
+    return jnp.array([[0, -x], [x, 0]])
 
 
-def Adj_inv(): ...
+@functools.partial(jnp.vectorize, signature="(n,n)->(m)")
+def vex3(x: Array) -> Array:
+    return jnp.array([x[2, 1], x[0, 2], x[1, 0]])
 
 
-def Adj_inv_op(): ...
-
-
-def dAdj(): ...
-
-
-def dAdj_op(): ...
-
-
-def dAdj_inv(): ...
-
-
-def dAdj_inv_op(): ...
-
-
-def expm(): ...
-
-
-def dexpm(): ...
-
-
-def logm(): ...
-
-
-def dlogm(): ...
-
-
-def lplus(): ...
-
-
-def rplus(): ...
-
-
-def lminus(): ...
-
-
-def rminus(): ...
+@functools.partial(jnp.vectorize, signature="(n,n)->(m)")
+def vex2(x: Array) -> RealScalarLike:
+    return jnp.asarray(x[1, 0])

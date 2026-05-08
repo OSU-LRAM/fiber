@@ -8,7 +8,11 @@ dependencies = [
     "diffrax>=0.7.0",
     "equinox>=0.13.2",
     "jax>=0.4.38",
+    "plum-dispatch>=2.9.0",
 ]
 
 [tool.ruff.lint]
-ignore = ["F722", "F821", "E731"]
+ignore = ["F722", "F821", "E731", "F811"]
+
+[tool.basedpyright]
+reportRedeclaration = false

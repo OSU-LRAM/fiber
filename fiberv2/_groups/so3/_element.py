@@ -20,7 +20,7 @@
 
 from collections.abc import Sequence
 from functools import partial
-from typing import override
+from typing import final, override
 
 import jax.numpy as jnp
 import numpy as np
@@ -34,6 +34,7 @@ from ...linalg._vecfuncs import skew3, softnorm, vex3
 from .._element import Element
 
 
+@final
 class Rotation3d(Element):
     """SO(3) group element."""
 
@@ -73,7 +74,7 @@ class Rotation3d(Element):
         return cls(cls.normalize(_unflatten(jnp.asarray(flat))))
 
     @property
-    def theta(self):
+    def angle(self):
         _rotation_angle(self.coordinates)
 
     @override
@@ -96,7 +97,7 @@ class Rotation3d(Element):
 
     @staticmethod
     def normalize(matrix: Array) -> Array:
-        return _normalize(matrix)
+        return _normalize_rotation(matrix)
 
     @dispatch
     def __matmul__(self, other: Spin3d) -> Spin3d:
@@ -106,11 +107,13 @@ class Rotation3d(Element):
     def __matmul__(self, other: Rotation3d) -> Rotation3d:
         return Rotation3d(self.coordinates @ other.coordinates)
 
+    @override
     def __repr__(self) -> str:
         repr = np.array2string(self.coordinates, prefix="Rotation3d(")  # type: ignore
         return f"Rotation3d({repr})"
 
 
+@final
 class Spin3d(Element):
     """so(3) tangent vector."""
 
@@ -197,18 +200,14 @@ class Spin3d(Element):
 
     __rmul__ = __mul__
 
+    @override
     def __repr__(self) -> str:
         repr = np.array2string(self.coordinates, prefix="Spin3d(")  # type: ignore
         return f"Spin3d({repr})"
 
 
-@partial(jnp.vectorize, signature="(n,n)->(m)")
-def _as_vector(matrix: Array) -> Array:
-    return vex3(matrix)
-
-
 @partial(jnp.vectorize, signature="(n,n)->(n,n)")
-def _normalize(matrix: Array) -> Array:
+def _normalize_rotation(matrix: Array) -> Array:
     x_raw, y_raw, _ = jnp.split(matrix, 3)
     x_raw, y_raw = x_raw.squeeze(), y_raw.squeeze()
     x_norm = softnorm(x_raw)
@@ -236,3 +235,8 @@ def _rotation_angle(matrix: Array) -> RealScalarLike:
     cos = jnp.clip(cos, -1, 1)
     theta = jnp.arccos(cos)
     return theta
+
+
+@partial(jnp.vectorize, signature="(n,n)->(m)")
+def _as_vector(matrix: Array) -> Array:
+    return vex3(matrix)

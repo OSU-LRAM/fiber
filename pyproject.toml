@@ -14,7 +14,5 @@ dependencies = [
 [tool.ruff.lint]
 ignore = ["F722", "F821", "E731", "F811"]
 
-[tool.basedpyright]
-reportRedeclaration = false
-reportUnknownVariableType = false
-reportUnknownArgumentType = false
+# [tool.basedpyright]
+# ignore = ["reportRedeclaration"]

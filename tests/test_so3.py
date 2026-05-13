@@ -20,6 +20,6 @@ if __name__ == "__main__":
     w = Twist3d.from_vector([0, 0, 0, 0, 0, 0], point=g)
     v = Twist3d.from_vector([1, 0, 0, 0, 0, 0], point=h)
 
-    interp = fiber.LocalPartitionedInterpolation(0.0, 1.0, w, v)
+    interp = fiber.LocalBundleInterpolation(0.0, 1.0, w, v)
 
     print(interp.evaluate(0.5, 0.75).point)

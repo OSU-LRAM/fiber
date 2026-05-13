@@ -22,8 +22,8 @@ from . import internal, random
 from ._groups.se3 import Isometry3d, Twist3d
 from ._groups.so3 import Rotation3d, Spin3d
 from ._local_interpolation import (
+    LocalBundleInterpolation,
     LocalGeodesicInterpolation,
-    LocalPartitionedInterpolation,
 )
 from ._ops import (
     Adj,
@@ -82,5 +82,5 @@ __all__ = [
     "rminus",
     "rplus",
     "LocalGeodesicInterpolation",
-    "LocalPartitionedInterpolation",
+    "LocalBundleInterpolation",
 ]

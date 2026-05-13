@@ -18,69 +18,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from . import internal, random
-from ._groups.se3 import Isometry3d, Twist3d
-from ._groups.so3 import Rotation3d, Spin3d
-from ._local_interpolation import (
-    LocalGeodesicInterpolation,
-    LocalPartitionedInterpolation,
-)
-from ._ops import (
-    Adj,
-    Adj_inv,
-    Adj_inv_op,
-    Adj_op,
-    adj,
-    adj_op,
-    dAdj,
-    dadj,
-    dAdj_inv,
-    dadj_inv,
-    dAdj_inv_op,
-    dadj_inv_op,
-    dAdj_op,
-    dadj_op,
-    dexpm,
-    dlogm,
-    expm,
-    inv,
-    lminus,
-    logm,
-    lplus,
-    rminus,
-    rplus,
-)
+from ._custom_types import RealScalarLike
+from ._ops import expm, rminus
 
-__all__ = [
-    "internal",
-    "random",
-    "Isometry3d",
-    "Twist3d",
-    "Rotation3d",
-    "Spin3d",
-    "Adj",
-    "Adj_inv",
-    "Adj_inv_op",
-    "Adj_op",
-    "adj",
-    "adj_op",
-    "dAdj",
-    "dadj",
-    "dAdj_inv",
-    "dadj_inv",
-    "dAdj_inv_op",
-    "dadj_inv_op",
-    "dAdj_op",
-    "dadj_op",
-    "dexpm",
-    "dlogm",
-    "expm",
-    "inv",
-    "lminus",
-    "logm",
-    "lplus",
-    "rminus",
-    "rplus",
-    "LocalGeodesicInterpolation",
-    "LocalPartitionedInterpolation",
-]
+
+def lerp(y0, y1, coeff: RealScalarLike):
+    return y0 + coeff * (y1 - y0)
+
+
+def glerp(y0, y1, coeff: RealScalarLike):
+    return y0 @ expm(coeff * rminus(y1, y0))

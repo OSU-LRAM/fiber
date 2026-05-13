@@ -18,76 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import jax.numpy as jnp
-from jaxtyping import Array
+from .._groups import se3, so3
+from .._vecfuncs import skew2, skew3, softclip, softnorm
 
-
-def inv(g: Array) -> Array:
-    return jnp.linalg.inv(g)
-
-
-def adj(g: Array, h: Array) -> Array:
-    return g @ h + h @ g
-
-
-def adj_op(): ...
-
-
-def dadj(): ...
-
-
-def dadj_op(): ...
-
-
-def dadj_inv(): ...
-
-
-def dadj_inv_op(): ...
-
-
-def Adj(): ...
-
-
-def Adj_op(): ...
-
-
-def Adj_inv(): ...
-
-
-def Adj_inv_op(): ...
-
-
-def dAdj(): ...
-
-
-def dAdj_op(): ...
-
-
-def dAdj_inv(): ...
-
-
-def dAdj_inv_op(): ...
-
-
-def expm(): ...
-
-
-def dexpm(): ...
-
-
-def logm(): ...
-
-
-def dlogm(): ...
-
-
-def lplus(): ...
-
-
-def rplus(): ...
-
-
-def lminus(): ...
-
-
-def rminus(): ...
+__all__ = ["se3", "so3", "skew2", "skew3", "softclip", "softnorm"]

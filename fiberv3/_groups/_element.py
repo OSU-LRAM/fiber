@@ -23,7 +23,7 @@ from typing import Generic, Optional, TypeVar
 
 import equinox as eqx
 from equinox import AbstractVar
-from jaxtyping import Array, PyTree
+from jaxtyping import Array
 
 from .._custom_types import ArrayLike
 

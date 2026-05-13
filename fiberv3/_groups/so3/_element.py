@@ -1,7 +1,28 @@
+# Copyright 2026, Evan Palmer
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
 import functools
 from collections.abc import Sequence
-from typing import Optional, cast
+from typing import Optional, Union, cast
 
+import equinox as eqx
 import jax.numpy as jnp
 import numpy as np
 from jax.scipy.spatial.transform import Rotation as R
@@ -9,12 +30,12 @@ from jaxtyping import Array
 from plum import dispatch
 
 from ..._custom_types import ArrayLike, RealScalarLike
-from ..._vecfuncs import softnorm
+from ..._vecfuncs import skew3, softnorm, vex3
 from .._element import AbstractGroupElement, AbstractTangentVector
 
 
 class Rotation3d(AbstractGroupElement):
-    value: Array
+    value: Array = eqx.field(converter=jnp.asarray)
 
     @property
     def angle(self) -> float:
@@ -35,7 +56,12 @@ class Rotation3d(AbstractGroupElement):
         return R.from_matrix(self.value).as_quat()
 
     @classmethod
-    def from_euler(cls, seq: str, angles: Sequence[float], degrees: bool = False):
+    def from_euler(
+        cls,
+        seq: str,
+        angles: Union[ArrayLike, Sequence[ArrayLike]],
+        degrees: bool = False,
+    ):
         return cls(R.from_euler(seq, jnp.asarray(angles), degrees).as_matrix())
 
     def as_euler(self, seq: str, degrees: bool = False) -> Array:
@@ -61,7 +87,7 @@ class Rotation3d(AbstractGroupElement):
 
 class Spin3d(AbstractTangentVector[Rotation3d]):
     point: Rotation3d
-    value: Array
+    value: Array = eqx.field(converter=jnp.asarray)
 
     def __check_init__(self):
         if not isinstance(self.point, Rotation3d):
@@ -78,9 +104,55 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
         return self.value
 
     @classmethod
-    def from_vector(cls, vec: Array, point: Optional[Rotation3d] = None): ...
+    def from_vector(cls, vec: ArrayLike, point: Optional[Rotation3d] = None):
+        point = Rotation3d.eye() if point is None else point
+        return cls(point, skew3(jnp.asarray(vec)))
 
-    def as_vector(self) -> Array: ...
+    def as_vector(self) -> Array:
+        return vex3(self.value)
+
+    def __matmul__(self, other: Rotation3d) -> Spin3d:
+        return Spin3d(other, self.value @ other.value)
+
+    @dispatch
+    def __add__(self, other: Spin3d) -> Spin3d:  # type: ignore[reportRedeclaration]
+        return Spin3d(self.point, self.value + other.value)
+
+    @dispatch
+    def __add__(self, other: ArrayLike) -> Spin3d:
+        return Spin3d(self.point, self.value + other)
+
+    __radd__ = __add__
+
+    @dispatch
+    def __sub__(self, other: Spin3d) -> Spin3d:  # type: ignore[reportRedeclaration]
+        return Spin3d(self.point, self.value - other.value)
+
+    @dispatch
+    def __sub__(self, other: ArrayLike) -> Spin3d:
+        return Spin3d(self.point, self.value - other)
+
+    __rsub__ = __sub__
+
+    @dispatch
+    def __mul__(self, other: Spin3d) -> Spin3d:  # type: ignore[reportRedeclaration]
+        return Spin3d(self.point, self.value * other.value)
+
+    @dispatch
+    def __mul__(self, other: ArrayLike) -> Spin3d:
+        return Spin3d(self.point, self.value * other)
+
+    __rmul__ = __mul__
+
+    @dispatch
+    def __div__(self, other: Spin3d) -> Spin3d:  # type: ignore[reportRedeclaration]
+        return Spin3d(self.point, self.value / other.value)
+
+    @dispatch
+    def __div__(self, other: ArrayLike) -> Spin3d:
+        return Spin3d(self.point, self.value / other)
+
+    __rdiv__ = __div__
 
     def __repr__(self) -> str:
         repr = np.array2string(cast(np.ndarray, self.value), prefix="Spin3d(")

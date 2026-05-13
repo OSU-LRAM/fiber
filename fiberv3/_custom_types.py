@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
 from jaxtyping import Array, Bool, Float, Int, PyTree, Real, Shaped
@@ -11,14 +11,13 @@ if TYPE_CHECKING:
     type FloatScalarLike = float | Array | np.ndarray
     type IntScalarLike = int | Array | np.ndarray
     type RealScalarLike = bool | int | float | Array | np.ndarray
+    type ArrayLike = _ArrayLike | Any
 else:
     type BoolScalarLike = Bool[_ArrayLike, ""]
     FloatScalarLike = Float[_ArrayLike, ""]
     IntScalarLike = Int[_ArrayLike, ""]
     RealScalarLike = Real[_ArrayLike, ""]
-
-# this matches the numpy `ArrayLike` type
-type ArrayLike = _ArrayLike | Any
+    ArrayLike = Union[_ArrayLike, Any]
 
 # the following types come from:
 # https://github.com/patrick-kidger/diffrax/blob/main/diffrax/_custom_types.py

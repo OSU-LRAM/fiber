@@ -18,41 +18,59 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import functools
-from typing import Sequence
+from . import random
+from ._element import Isometry3d, Twist3d
+from ._operations import (
+    Adj,
+    Adj_inv,
+    Adj_inv_op,
+    Adj_op,
+    adj,
+    adj_op,
+    dAdj,
+    dadj,
+    dAdj_inv,
+    dadj_inv,
+    dAdj_inv_op,
+    dadj_inv_op,
+    dAdj_op,
+    dadj_op,
+    dexpm,
+    dlogm,
+    expm,
+    inv,
+    lminus,
+    logm,
+    lplus,
+    rminus,
+    rplus,
+)
 
-import jax.numpy as jnp
-from jaxtyping import Array, ArrayLike
-
-from .._custom_types import RealScalarLike
-from .._epsilon import ε
-
-_Axis = None | int | Sequence[int]
-
-
-def softnorm(g: ArrayLike, axis: _Axis = None) -> ArrayLike:
-    return jnp.sqrt(jnp.sum(g**2, axis=axis) + ε)
-
-
-def softclip(g: ArrayLike, min: ArrayLike, max: ArrayLike) -> ArrayLike:
-    return jnp.clip(g, min + ε, max - ε)
-
-
-@functools.partial(jnp.vectorize, signature="(n)->(m,m)")
-def skew3(x: Array) -> Array:
-    return jnp.array([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
-
-
-@functools.partial(jnp.vectorize, signature="(n)->(m,m)")
-def skew2(x: RealScalarLike) -> Array:
-    return jnp.array([[0, -x], [x, 0]])
-
-
-@functools.partial(jnp.vectorize, signature="(n,n)->(m)")
-def vex3(x: Array) -> Array:
-    return jnp.array([x[2, 1], x[0, 2], x[1, 0]])
-
-
-@functools.partial(jnp.vectorize, signature="(n,n)->(m)")
-def vex2(x: Array) -> RealScalarLike:
-    return jnp.asarray(x[1, 0])
+__all__ = [
+    "random",
+    "Isometry3d",
+    "Twist3d",
+    "Adj",
+    "Adj_inv",
+    "Adj_inv_op",
+    "Adj_op",
+    "adj",
+    "adj_op",
+    "dAdj",
+    "dadj",
+    "dAdj_inv",
+    "dadj_inv",
+    "dAdj_inv_op",
+    "dadj_inv_op",
+    "dAdj_op",
+    "dadj_op",
+    "dexpm",
+    "dlogm",
+    "expm",
+    "inv",
+    "lminus",
+    "logm",
+    "lplus",
+    "rminus",
+    "rplus",
+]

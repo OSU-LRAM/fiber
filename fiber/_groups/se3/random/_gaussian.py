@@ -28,7 +28,7 @@ from jaxtyping import Array, PRNGKeyArray
 
 from ...._vecfuncs import softnorm
 from .._element import _as_vector, _from_vector
-from .._ops import expm, logm, lplus, rminus, rplus
+from .._operations import expm, logm, lplus, rminus, rplus
 
 
 def sample_lie_algebra(

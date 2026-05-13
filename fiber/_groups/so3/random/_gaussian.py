@@ -22,71 +22,80 @@ from collections.abc import Sequence
 from typing import Optional
 
 import jax.numpy as jnp
+import jax.random as jr
+import optimistix as optx
 from jaxtyping import Array, PRNGKeyArray
-from plum import dispatch
 
-from .._groups import se3, so3
-from .._groups.se3 import Isometry3d, Twist3d
-from .._groups.so3 import Rotation3d, Spin3d
+from ...._vecfuncs import skew3, softnorm, vex3
+from .._operations import expm, logm, lplus, rminus, rplus
 
 
-@dispatch
-def gaussian(  # type: ignore[reportRedeclaration]
+def sample_lie_algebra(
     key: PRNGKeyArray,
-    mean: Rotation3d,
     cov: Array,
     shape: Optional[Sequence[int]] = None,
     method: str = "cholesky",
-    left: bool = True,
-) -> tuple[Rotation3d, Spin3d]:
-    elements, vectors = so3.random.gaussian(key, mean.value, cov, shape, method, left)
-    point = Rotation3d(jnp.broadcast_to(mean.value, vectors.shape))
-    return Rotation3d.from_matrix(elements), Spin3d.from_matrix(vectors, point)
+) -> Array:
+    return jr.multivariate_normal(key, jnp.zeros(3), cov, shape, method=method)
 
 
-@dispatch
 def gaussian(
     key: PRNGKeyArray,
-    mean: Isometry3d,
+    mean: Array,
     cov: Array,
     shape: Optional[Sequence[int]] = None,
     method: str = "cholesky",
     left: bool = True,
-) -> tuple[Isometry3d, Twist3d]:
-    elements, vectors = se3.random.gaussian(key, mean.value, cov, shape, method, left)
-    point = Isometry3d(jnp.broadcast_to(mean.value, vectors.shape))
-    return Isometry3d.from_matrix(elements), Twist3d.from_matrix(vectors, point)
+) -> tuple[Array, Array]:
+    samples = sample_lie_algebra(key, cov, shape, method)
+    vectors = skew3(samples)
+
+    if left:
+        elements = rplus(mean, vectors)
+    else:
+        elements = lplus(mean, vectors)
+
+    return elements, vectors
 
 
-@dispatch
-def mean(  # type: ignore[reportRedeclaration]
-    samples: Rotation3d,
-    rtol: float = 1e-6,
-    atol=1e-6,
-    max_steps: int = 100,
-    throw: bool = True,
-) -> Rotation3d:
-    est_mean = so3.random.mean(samples.value, rtol, atol, max_steps, throw)
-    return Rotation3d.from_matrix(est_mean)
+def normal(
+    key: PRNGKeyArray,
+    shape: Optional[Sequence[int]] = None,
+    left: bool = True,
+) -> tuple[Array, Array]:
+    return gaussian(key, jnp.eye(3), jnp.eye(3), shape, left=left)
 
 
-@dispatch
 def mean(
-    samples: Isometry3d,
+    samples: Array,
     rtol: float = 1e-6,
     atol=1e-6,
     max_steps: int = 100,
     throw: bool = True,
-) -> Isometry3d:
-    est_mean = se3.random.mean(samples.value, rtol, atol, max_steps, throw)
-    return Isometry3d.from_matrix(est_mean)
+) -> Array:
+    def residuals(mean, samples):
+        errors = vex3(rminus(samples, mean))
+        return softnorm(jnp.sum(errors, axis=0))
+
+    # construct the initial guess to warm-start the solver
+    exp_coords = vex3(logm(samples))
+    init_mean = jnp.mean(exp_coords, axis=0)
+    y0 = expm(skew3(init_mean))
+
+    # find the mean using a root-finder
+    sol = optx.root_find(
+        residuals,
+        optx.Newton(rtol, atol),
+        y0,
+        args=samples,
+        max_steps=max_steps,
+        throw=throw,
+    )
+
+    return sol.value
 
 
-@dispatch
-def cov(mean: Rotation3d, samples: Rotation3d) -> Array:  # type: ignore[reportRedeclaration]
-    return so3.random.cov(mean.value, samples.value)
-
-
-@dispatch
-def cov(mean: Isometry3d, samples: Isometry3d) -> Array:
-    return se3.random.cov(mean.value, samples.value)
+def cov(mean: Array, samples: Array) -> Array:
+    distances = vex3(rminus(samples, mean))
+    sigma = jnp.divide(jnp.einsum("ni,nj->ij", distances, distances), len(samples))
+    return sigma

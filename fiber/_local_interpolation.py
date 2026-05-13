@@ -28,8 +28,8 @@ from jaxtyping import Array
 
 from ._custom_types import RealScalarLike
 from ._groups._element import AbstractGroupElement, AbstractTangentVector
-from ._interpolation import glerp, lerp
-from ._ops import expm, rminus
+from ._interpolation import left_glerp, lerp
+from ._operations import expm, rminus
 
 _GroupElement = TypeVar("_GroupElement", bound=AbstractGroupElement)
 _TangentVector = TypeVar("_TangentVector", bound=AbstractTangentVector)
@@ -55,14 +55,14 @@ class LocalGeodesicInterpolation(AbstractLocalInterpolation, Generic[_GroupEleme
         with jax.numpy_dtype_promotion("standard"):
             if t1 is None:
                 coeff = linear_rescale(self.t0, t0, self.t1)
-                return glerp(self.y0, self.y1, coeff)
+                return left_glerp(self.y0, self.y1, coeff)
             else:
                 coeff = (t1 - t0) / (self.t1 - self.t0)
                 incr = expm(coeff * rminus(self.y1, self.y0))  # type: ignore
                 return cast(_GroupElement, incr)
 
 
-class LocalBundleInterpolation(AbstractLocalInterpolation, Generic[_TangentVector]):
+class LocalLeftBundleInterpolation(AbstractLocalInterpolation, Generic[_TangentVector]):
     t0: RealScalarLike  # type: ignore[reportIncompatibleVariableOverride]
     t1: RealScalarLike  # type: ignore[reportIncompatibleVariableOverride]
     y0: _TangentVector
@@ -75,7 +75,7 @@ class LocalBundleInterpolation(AbstractLocalInterpolation, Generic[_TangentVecto
         with jax.numpy_dtype_promotion("standard"):
             if t1 is None:
                 coeff = linear_rescale(self.t0, t0, self.t1)
-                g_prime = glerp(self.y0.point, self.y1.point, coeff)
+                g_prime = left_glerp(self.y0.point, self.y1.point, coeff)
                 w_prime = lerp(self.y0, self.y1, coeff)
             else:
                 coeff = (t1 - t0) / (self.t1 - self.t0)

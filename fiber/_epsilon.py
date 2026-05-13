@@ -21,8 +21,6 @@
 import jax
 import jax.numpy as jnp
 
-ε = (
-    jnp.finfo(jnp.float64).eps
-    if jax.config._read("jax_enable_x64")
-    else jnp.finfo(jnp.float32).eps
+EPSILON = (
+    jnp.finfo(jnp.float64).eps if jax.enable_x64.value else jnp.finfo(jnp.float32).eps
 )

@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 from . import internal, random
+from ._global_interpolation import GeodesicInterpolation, LeftBundleInterpolation
 from ._groups.se3 import Isometry3d, Twist3d
 from ._groups.so3 import Rotation3d, Spin3d
 from ._local_interpolation import (
@@ -83,4 +84,6 @@ __all__ = [
     "rplus",
     "LocalGeodesicInterpolation",
     "LocalLeftBundleInterpolation",
+    "GeodesicInterpolation",
+    "LeftBundleInterpolation",
 ]

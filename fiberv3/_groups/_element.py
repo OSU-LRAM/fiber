@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 from abc import abstractmethod
+from collections.abc import Sequence
 from typing import Generic, Optional, TypeVar
 
 import equinox as eqx
@@ -30,6 +31,14 @@ from .._custom_types import ArrayLike
 
 class AbstractGroupElement(eqx.Module):
     value: AbstractVar[Array]
+
+    @property
+    def shape(self):
+        return self.value.shape
+
+    @property
+    def single(self) -> bool:
+        return self.value.ndim == 1
 
     @classmethod
     @abstractmethod
@@ -45,21 +54,43 @@ class AbstractGroupElement(eqx.Module):
     def eye(cls):
         raise NotImplementedError
 
+    @classmethod
+    @abstractmethod
+    def concatenate(cls, elements: Sequence):
+        raise NotImplementedError
+
+    def __len__(self) -> int:
+        if self.single:
+            raise TypeError("Single element has no len().")
+        return self.value.shape[0]
+
+    @abstractmethod
+    def __getitem__(self, indexer):
+        raise NotImplementedError
+
+    @abstractmethod
+    def __iter__(self):
+        raise NotImplementedError
+
+
+_GroupElement = TypeVar("_GroupElement", bound=AbstractGroupElement)
+
+
+class AbstractTangentVector(eqx.Module, Generic[_GroupElement]):
+    point: AbstractVar[_GroupElement]
+    value: AbstractVar[Array]
+
+    @property
+    def shape(self):
+        return self.value.shape
+
     @property
     def single(self) -> bool:
         return self.value.ndim == 1
 
-
-_G = TypeVar("_G", bound=AbstractGroupElement)
-
-
-class AbstractTangentVector(eqx.Module, Generic[_G]):
-    point: AbstractVar[_G]
-    value: AbstractVar[Array]
-
     @classmethod
     @abstractmethod
-    def from_matrix(cls, mat: Array, point: Optional[_G] = None):
+    def from_matrix(cls, mat: Array, point: Optional[_GroupElement] = None):
         raise NotImplementedError
 
     @abstractmethod
@@ -68,13 +99,27 @@ class AbstractTangentVector(eqx.Module, Generic[_G]):
 
     @classmethod
     @abstractmethod
-    def from_vector(cls, vec: Array, point: Optional[_G] = None):
+    def from_vector(cls, vec: Array, point: Optional[_GroupElement] = None):
         raise NotImplementedError
 
     @abstractmethod
     def as_vector(self) -> Array:
         raise NotImplementedError
 
-    @property
-    def single(self) -> bool:
-        return self.value.ndim == 1
+    @classmethod
+    @abstractmethod
+    def concatenate(cls, vectors: Sequence):
+        raise NotImplementedError
+
+    def __len__(self) -> int:
+        if self.single:
+            raise TypeError("Single vector has no len().")
+        return self.value.shape[0]
+
+    @abstractmethod
+    def __getitem__(self, indexer):
+        raise NotImplementedError
+
+    @abstractmethod
+    def __iter__(self):
+        raise NotImplementedError

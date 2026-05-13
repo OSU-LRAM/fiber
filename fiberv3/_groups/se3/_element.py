@@ -73,6 +73,21 @@ class Isometry3d(AbstractGroupElement):
     def eye(cls):
         return cls(jnp.eye(4))
 
+    @classmethod
+    def concatenate(cls, elements: Sequence[Isometry3d]):
+        return cls(jnp.concatenate([element.value for element in elements]))
+
+    def __getitem__(self, indexer):
+        if self.single:
+            raise TypeError("Single element is not subscriptable.")
+        return Isometry3d(self.value[indexer])
+
+    def __iter__(self):
+        if self.single:
+            raise TypeError("Single element is not iterable.")
+        for value in self.value:
+            yield Isometry3d(value)
+
     @dispatch
     def __matmul__(self, other: Isometry3d) -> Isometry3d:  # type: ignore[reportRedeclaration]
         return Isometry3d(self.value @ other.value)
@@ -96,9 +111,17 @@ class Twist3d(AbstractTangentVector[Isometry3d]):
                 "The tangent vector point must be a `Isometry3d` instance!"
             )
 
+        if self.point.shape != self.value.shape:
+            raise ValueError(
+                "Must have point.shape == value.shape, that is to say each tangent "
+                "vector should be assigned a point."
+            )
+
     @classmethod
     def from_matrix(cls, mat: Array, point: Optional[Isometry3d] = None):
-        point = Isometry3d.eye() if point is None else point
+        if point is None:
+            shape = mat.shape[:-2]
+            point = Isometry3d(jnp.broadcast_to(jnp.eye(4), (*shape, 4, 4)))
         return cls(point, mat)
 
     def as_matrix(self) -> Array:
@@ -106,11 +129,30 @@ class Twist3d(AbstractTangentVector[Isometry3d]):
 
     @classmethod
     def from_vector(cls, vec: ArrayLike, point: Optional[Isometry3d] = None):
-        point = Isometry3d.eye() if point is None else point
+        vec = jnp.asarray(vec)
+        if point is None:
+            shape = vec.shape[:-1]
+            point = Isometry3d(jnp.broadcast_to(jnp.eye(4), (*shape, 4, 4)))
         return cls(point, _from_vector(jnp.asarray(vec)))
 
     def as_vector(self) -> Array:
         return _as_vector(self.value)
+
+    @classmethod
+    def concatenate(cls, vectors: Sequence[Twist3d]):
+        points = Isometry3d.concatenate([vector.point for vector in vectors])
+        return cls(points, jnp.concatenate([vector.value for vector in vectors]))
+
+    def __getitem__(self, indexer):
+        if self.single:
+            raise TypeError("Single vector is not subscriptable.")
+        return Twist3d(self.point[indexer], self.value[indexer])
+
+    def __iter__(self):
+        if self.single:
+            raise TypeError("Single vector is not iterable.")
+        for point, value in zip(self.point, self.value):
+            yield Twist3d(point, value)
 
     def __matmul__(self, other: Isometry3d) -> Twist3d:
         return Twist3d(other, self.value @ other.value)
@@ -162,7 +204,9 @@ class Twist3d(AbstractTangentVector[Isometry3d]):
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def _from_matrix(mat: Array) -> Array:
-    return mat.at[:3, :3].set(_normalize_rotation(mat[:3, :3]))
+    mat = mat.at[:3, :3].set(_normalize_rotation(mat[:3, :3]))
+    mat = mat.at[3, :4].set(jnp.array([0, 0, 0, 1]))
+    return mat
 
 
 def _from_euclidean(vec: Array, seq: str, degrees: bool) -> Array:

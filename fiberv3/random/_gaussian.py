@@ -21,6 +21,7 @@
 from collections.abc import Sequence
 from typing import Optional
 
+import jax.numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
 from plum import dispatch
 
@@ -39,7 +40,8 @@ def gaussian(  # type: ignore[reportRedeclaration]
     left: bool = True,
 ) -> tuple[Rotation3d, Spin3d]:
     elements, vectors = so3.random.gaussian(key, mean.value, cov, shape, method, left)
-    return Rotation3d.from_matrix(elements), Spin3d.from_matrix(vectors)
+    point = Rotation3d(jnp.broadcast_to(mean.value, vectors.shape))
+    return Rotation3d.from_matrix(elements), Spin3d.from_matrix(vectors, point)
 
 
 @dispatch
@@ -52,7 +54,8 @@ def gaussian(
     left: bool = True,
 ) -> tuple[Isometry3d, Twist3d]:
     elements, vectors = se3.random.gaussian(key, mean.value, cov, shape, method, left)
-    return Isometry3d.from_matrix(elements), Twist3d.from_matrix(vectors)
+    point = Isometry3d(jnp.broadcast_to(mean.value, vectors.shape))
+    return Isometry3d.from_matrix(elements), Twist3d.from_matrix(vectors, point)
 
 
 @dispatch

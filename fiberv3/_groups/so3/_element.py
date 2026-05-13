@@ -72,6 +72,21 @@ class Rotation3d(AbstractGroupElement):
     def eye(cls):
         return cls(jnp.eye(3))
 
+    @classmethod
+    def concatenate(cls, elements: Sequence[Rotation3d]):
+        return cls(jnp.concatenate([element.value for element in elements]))
+
+    def __getitem__(self, indexer):
+        if self.single:
+            raise TypeError("Single element is not subscriptable.")
+        return Rotation3d(self.value[indexer])
+
+    def __iter__(self):
+        if self.single:
+            raise TypeError("Single element is not iterable.")
+        for value in self.value:
+            yield Rotation3d(value)
+
     @dispatch
     def __matmul__(self, other: Rotation3d) -> Rotation3d:  # type: ignore[reportRedeclaration]
         return Rotation3d(self.value @ other.value)
@@ -91,13 +106,20 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
 
     def __check_init__(self):
         if not isinstance(self.point, Rotation3d):
+            raise ValueError("The tangent vector point must be a Rotation3d instance")
+
+        if self.point.shape != self.value.shape:
             raise ValueError(
-                "The tangent vector point must be a `Rotation3d` instance!"
+                "Must have point.shape == value.shape, that is to say each tangent "
+                "vector should be assigned a point."
             )
 
     @classmethod
     def from_matrix(cls, mat: Array, point: Optional[Rotation3d] = None):
-        point = Rotation3d.eye() if point is None else point
+        vec = jnp.asarray(mat)
+        if point is None:
+            shape = vec.shape[:-2]
+            point = Rotation3d(jnp.broadcast_to(jnp.eye(4), (*shape, 4, 4)))
         return cls(point, mat)
 
     def as_matrix(self) -> Array:
@@ -105,11 +127,30 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
 
     @classmethod
     def from_vector(cls, vec: ArrayLike, point: Optional[Rotation3d] = None):
-        point = Rotation3d.eye() if point is None else point
+        vec = jnp.asarray(vec)
+        if point is None:
+            shape = vec.shape[:-1]
+            point = Rotation3d(jnp.broadcast_to(jnp.eye(4), (*shape, 4, 4)))
         return cls(point, skew3(jnp.asarray(vec)))
 
     def as_vector(self) -> Array:
         return vex3(self.value)
+
+    @classmethod
+    def concatenate(cls, vectors: Sequence[Spin3d]):
+        points = Rotation3d.concatenate([vector.point for vector in vectors])
+        return cls(points, jnp.concatenate([vector.value for vector in vectors]))
+
+    def __getitem__(self, indexer):
+        if self.single:
+            raise TypeError("Single vector is not subscriptable.")
+        return Spin3d(self.point[indexer], self.value[indexer])
+
+    def __iter__(self):
+        if self.single:
+            raise TypeError("Single vector is not iterable.")
+        for point, value in zip(self.point, self.value):
+            yield Spin3d(point, value)
 
     def __matmul__(self, other: Rotation3d) -> Spin3d:
         return Spin3d(other, self.value @ other.value)

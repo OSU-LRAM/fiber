@@ -38,6 +38,7 @@ from ..so2._element import Rotation2d, _normalize_rotation, _rotation_angle
 
 class Isometry2d(AbstractGroupElement):
     value: Array = eqx.field(converter=jnp.asarray)
+    nparams: int = eqx.field(static=True, default=6)
 
     @property
     def position(self) -> Array:
@@ -104,6 +105,7 @@ class Isometry2d(AbstractGroupElement):
 class Twist2d(AbstractTangentVector[Isometry2d]):
     point: Isometry2d
     value: Array = eqx.field(converter=jnp.asarray)
+    nparams: int = eqx.field(static=True, default=3)
 
     def __check_init__(self):
         if not isinstance(self.point, Isometry2d):

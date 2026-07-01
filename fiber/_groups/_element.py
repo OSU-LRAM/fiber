@@ -31,6 +31,7 @@ from .._custom_types import ArrayLike
 
 class AbstractGroupElement(eqx.Module):
     value: AbstractVar[Array]
+    nparams: AbstractVar[int]
 
     @property
     def shape(self):
@@ -79,6 +80,7 @@ _GroupElement = TypeVar("_GroupElement", bound=AbstractGroupElement)
 class AbstractTangentVector(eqx.Module, Generic[_GroupElement]):
     point: AbstractVar[_GroupElement]
     value: AbstractVar[Array]
+    nparams: AbstractVar[int]
 
     @property
     def shape(self):

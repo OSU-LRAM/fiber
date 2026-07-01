@@ -44,6 +44,7 @@ from ._operations import (
     lplus,
     rminus,
     rplus,
+    split_bundle,
 )
 
 __all__ = [
@@ -73,4 +74,5 @@ __all__ = [
     "lplus",
     "rminus",
     "rplus",
+    "split_bundle",
 ]

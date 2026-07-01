@@ -147,3 +147,8 @@ def lminus(g: Array, h: Array) -> Array:
 @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
 def rminus(g: Array, h: Array) -> Array:
     return logm(inv(h) @ g)
+
+
+def split_bundle(s: Array, axis: int = 0) -> tuple[Array, Array]:
+    g, w = jnp.split(s, (4,), axis=axis)
+    return g, w

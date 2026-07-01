@@ -37,6 +37,7 @@ from ..so3._element import Rotation3d, _normalize_rotation
 
 class Isometry3d(AbstractGroupElement):
     value: Array = eqx.field(converter=jnp.asarray)
+    nparams: int = eqx.field(static=True, default=12)
 
     @property
     def position(self) -> Array:
@@ -104,6 +105,7 @@ class Isometry3d(AbstractGroupElement):
 class Twist3d(AbstractTangentVector[Isometry3d]):
     point: Isometry3d
     value: Array = eqx.field(converter=jnp.asarray)
+    nparams: int = eqx.field(static=True, default=6)
 
     def __check_init__(self):
         if not isinstance(self.point, Isometry3d):

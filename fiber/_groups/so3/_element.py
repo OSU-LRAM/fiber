@@ -36,6 +36,7 @@ from .._element import AbstractGroupElement, AbstractTangentVector
 
 class Rotation3d(AbstractGroupElement):
     value: Array = eqx.field(converter=jnp.asarray)
+    nparams: int = eqx.field(static=True, default=9)
 
     @property
     def angle(self) -> float:
@@ -103,6 +104,7 @@ class Rotation3d(AbstractGroupElement):
 class Spin3d(AbstractTangentVector[Rotation3d]):
     point: Rotation3d
     value: Array = eqx.field(converter=jnp.asarray)
+    nparams: int = eqx.field(static=True, default=3)
 
     def __check_init__(self):
         if not isinstance(self.point, Rotation3d):

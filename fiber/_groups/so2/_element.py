@@ -18,27 +18,28 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from __future__ import annotations
+
 import functools
 from collections.abc import Sequence
-from typing import Optional, Union, cast
+from typing import Optional, cast
 
 import equinox as eqx
 import jax.numpy as jnp
 import numpy as np
-from jax.scipy.spatial.transform import Rotation as R
 from jaxtyping import Array
 from plum import dispatch
 
 from ..._custom_types import ArrayLike, RealScalarLike
-from ..._vecfuncs import skew3, softnorm, vex3
+from ..._vecfuncs import skew2, softnorm, vex2
 from .._element import AbstractGroupElement, AbstractTangentVector
 
 
-class Rotation3d(AbstractGroupElement):
+class Rotation2d(AbstractGroupElement):
     value: Array = eqx.field(converter=jnp.asarray)
 
     @property
-    def angle(self) -> float:
+    def angle(self) -> Array:
         return _rotation_angle(self.value)
 
     @classmethod
@@ -49,64 +50,51 @@ class Rotation3d(AbstractGroupElement):
         return self.value
 
     @classmethod
-    def from_quat(cls, quat: ArrayLike):
-        return cls(R.from_quat(jnp.asarray(quat)).as_matrix())
+    def from_angle(cls, angle: ArrayLike):
+        return cls(_from_angle(jnp.asarray(angle)))
 
-    def as_quat(self) -> Array:
-        return R.from_matrix(self.value).as_quat()
-
-    @classmethod
-    def from_euler(
-        cls,
-        seq: str,
-        angles: Union[ArrayLike, Sequence[ArrayLike]],
-        degrees: bool = False,
-    ):
-        return cls(R.from_euler(seq, jnp.asarray(angles), degrees).as_matrix())
-
-    def as_euler(self, seq: str, degrees: bool = False) -> Array:
-        euler = R.from_matrix(self.value).as_euler(seq, degrees)
-        return cast(Array, euler)
+    def as_angle(self) -> Array:
+        return self.angle
 
     @classmethod
     def eye(cls):
-        return cls(jnp.eye(3))
+        return cls(jnp.eye(2))
 
     @classmethod
-    def concatenate(cls, elements: Sequence[Rotation3d]):
+    def concatenate(cls, elements: Sequence[Rotation2d]):
         return cls(jnp.concatenate([element.value for element in elements]))
 
     def __getitem__(self, indexer):
         if self.single:
             raise TypeError("Single element is not subscriptable.")
-        return Rotation3d(self.value[indexer])
+        return Rotation2d(self.value[indexer])
 
     def __iter__(self):
         if self.single:
             raise TypeError("Single element is not iterable.")
         for value in self.value:
-            yield Rotation3d(value)
+            yield Rotation2d(value)
 
     @dispatch
-    def __matmul__(self, other: Rotation3d) -> Rotation3d:  # type: ignore[reportRedeclaration]
-        return Rotation3d(self.value @ other.value)
+    def __matmul__(self, other: Rotation2d) -> Rotation2d:  # type: ignore[reportRedeclaration]
+        return Rotation2d(self.value @ other.value)
 
     @dispatch
-    def __matmul__(self, other: Spin3d) -> Spin3d:
-        return Spin3d(self, self.value @ other.value)
+    def __matmul__(self, other: Spin2d) -> Spin2d:
+        return Spin2d(self, self.value @ other.value)
 
     def __repr__(self) -> str:
-        repr = np.array2string(cast(np.ndarray, self.value), prefix="Rotation3d(")
-        return f"Rotation3d({repr})"
+        repr = np.array2string(cast(np.ndarray, self.value), prefix="Rotation2d(")
+        return f"Rotation2d({repr})"
 
 
-class Spin3d(AbstractTangentVector[Rotation3d]):
-    point: Rotation3d
+class Spin2d(AbstractTangentVector[Rotation2d]):
+    point: Rotation2d
     value: Array = eqx.field(converter=jnp.asarray)
 
     def __check_init__(self):
-        if not isinstance(self.point, Rotation3d):
-            raise ValueError("The tangent vector point must be a Rotation3d instance")
+        if not isinstance(self.point, Rotation2d):
+            raise ValueError("The tangent vector point must be a Rotation2d instance")
 
         if self.point.shape != self.value.shape:
             raise ValueError(
@@ -115,107 +103,110 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
             )
 
     @classmethod
-    def from_matrix(cls, mat: Array, point: Optional[Rotation3d] = None):
+    def from_matrix(cls, mat: Array, point: Optional[Rotation2d] = None):
         vec = jnp.asarray(mat)
         if point is None:
             shape = vec.shape[:-2]
-            point = Rotation3d(jnp.broadcast_to(jnp.eye(3), (*shape, 3, 3)))
+            point = Rotation2d(jnp.broadcast_to(jnp.eye(2), (*shape, 2, 2)))
         return cls(point, mat)
 
     def as_matrix(self) -> Array:
         return self.value
 
     @classmethod
-    def from_vector(cls, vec: ArrayLike, point: Optional[Rotation3d] = None):
+    def from_vector(cls, vec: ArrayLike, point: Optional[Rotation2d] = None):
         vec = jnp.asarray(vec)
         if point is None:
-            shape = vec.shape[:-1]
-            point = Rotation3d(jnp.broadcast_to(jnp.eye(3), (*shape, 3, 3)))
-        return cls(point, skew3(jnp.asarray(vec)))
+            shape = vec.shape
+            point = Rotation2d(jnp.broadcast_to(jnp.eye(2), (*shape, 2, 2)))
+        return cls(point, skew2(vec))
 
     def as_vector(self) -> Array:
-        return vex3(self.value)
+        return vex2(self.value)
 
     @classmethod
-    def concatenate(cls, vectors: Sequence[Spin3d]):
-        points = Rotation3d.concatenate([vector.point for vector in vectors])
+    def concatenate(cls, vectors: Sequence[Spin2d]):
+        points = Rotation2d.concatenate([vector.point for vector in vectors])
         return cls(points, jnp.concatenate([vector.value for vector in vectors]))
 
     def __getitem__(self, indexer):
         if self.single:
             raise TypeError("Single vector is not subscriptable.")
-        return Spin3d(self.point[indexer], self.value[indexer])
+        return Spin2d(self.point[indexer], self.value[indexer])
 
     def __iter__(self):
         if self.single:
             raise TypeError("Single vector is not iterable.")
         for point, value in zip(self.point, self.value):
-            yield Spin3d(point, value)
+            yield Spin2d(point, value)
 
-    def __matmul__(self, other: Rotation3d) -> Spin3d:
-        return Spin3d(other, self.value @ other.value)
-
-    @dispatch
-    def __add__(self, other: Spin3d) -> Spin3d:  # type: ignore[reportRedeclaration]
-        return Spin3d(self.point, self.value + other.value)
+    def __matmul__(self, other: Rotation2d) -> Spin2d:
+        return Spin2d(other, self.value @ other.value)
 
     @dispatch
-    def __add__(self, other: ArrayLike) -> Spin3d:
-        return Spin3d(self.point, self.value + other)
+    def __add__(self, other: Spin2d) -> Spin2d:  # type: ignore[reportRedeclaration]
+        return Spin2d(self.point, self.value + other.value)
+
+    @dispatch
+    def __add__(self, other: ArrayLike) -> Spin2d:
+        return Spin2d(self.point, self.value + other)
 
     __radd__ = __add__
 
     @dispatch
-    def __sub__(self, other: Spin3d) -> Spin3d:  # type: ignore[reportRedeclaration]
-        return Spin3d(self.point, self.value - other.value)
+    def __sub__(self, other: Spin2d) -> Spin2d:  # type: ignore[reportRedeclaration]
+        return Spin2d(self.point, self.value - other.value)
 
     @dispatch
-    def __sub__(self, other: ArrayLike) -> Spin3d:
-        return Spin3d(self.point, self.value - other)
+    def __sub__(self, other: ArrayLike) -> Spin2d:
+        return Spin2d(self.point, self.value - other)
 
     __rsub__ = __sub__
 
     @dispatch
-    def __mul__(self, other: Spin3d) -> Spin3d:  # type: ignore[reportRedeclaration]
-        return Spin3d(self.point, self.value * other.value)
+    def __mul__(self, other: Spin2d) -> Spin2d:  # type: ignore[reportRedeclaration]
+        return Spin2d(self.point, self.value * other.value)
 
     @dispatch
-    def __mul__(self, other: ArrayLike) -> Spin3d:
-        return Spin3d(self.point, self.value * other)
+    def __mul__(self, other: ArrayLike) -> Spin2d:
+        return Spin2d(self.point, self.value * other)
 
     __rmul__ = __mul__
 
     @dispatch
-    def __div__(self, other: Spin3d) -> Spin3d:  # type: ignore[reportRedeclaration]
-        return Spin3d(self.point, self.value / other.value)
+    def __div__(self, other: Spin2d) -> Spin2d:  # type: ignore[reportRedeclaration]
+        return Spin2d(self.point, self.value / other.value)
 
     @dispatch
-    def __div__(self, other: ArrayLike) -> Spin3d:
-        return Spin3d(self.point, self.value / other)
+    def __div__(self, other: ArrayLike) -> Spin2d:
+        return Spin2d(self.point, self.value / other)
 
     __rdiv__ = __div__
 
     def __repr__(self) -> str:
-        repr = np.array2string(cast(np.ndarray, self.value), prefix="Spin3d(")
-        return f"Spin3d({repr})"
+        repr = np.array2string(cast(np.ndarray, self.value), prefix="Spin2d(")
+        return f"Spin2d({repr})"
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def _normalize_rotation(mat: Array) -> Array:
-    x_raw, y_raw, _ = jnp.split(mat, 3)
+    x_raw, y_raw = jnp.split(mat, 2)
     x_raw, y_raw = x_raw.squeeze(), y_raw.squeeze()
     x_norm = softnorm(x_raw)
     x = x_raw / jnp.maximum(x_norm, 1e-8)
-    z = jnp.cross(x, y_raw)
-    z_norm = softnorm(z)
-    z = z / jnp.maximum(z_norm, 1e-8)
-    y = jnp.cross(z, x)
-    return jnp.stack((x, y, z)).squeeze()
+    perp = jnp.array([-x[1], x[0]])
+    sign = jnp.sign(jnp.dot(perp, y_raw))
+    sign = jnp.where(sign == 0, 1.0, sign)
+    y = sign * perp
+    return jnp.stack((x, y))
+
+
+@functools.partial(jnp.vectorize, signature="()->(n,n)")
+def _from_angle(angle: RealScalarLike) -> Array:
+    cos, sin = jnp.cos(angle), jnp.sin(angle)
+    return jnp.array([[cos, -sin], [sin, cos]])
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->()")
 def _rotation_angle(mat: Array) -> RealScalarLike:
-    cos = (jnp.trace(mat) - 1) / 2
-    cos = jnp.clip(cos, -1, 1)
-    theta = jnp.arccos(cos)
-    return theta
+    return jnp.arctan2(mat[1, 0], mat[0, 0])

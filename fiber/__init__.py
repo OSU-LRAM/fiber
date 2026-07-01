@@ -20,7 +20,9 @@
 
 from . import internal, random
 from ._global_interpolation import GeodesicInterpolation, LeftBundleInterpolation
+from ._groups.se2 import Isometry2d, Twist2d
 from ._groups.se3 import Isometry3d, Twist3d
+from ._groups.so2 import Rotation2d, Spin2d
 from ._groups.so3 import Rotation3d, Spin3d
 from ._local_interpolation import (
     LocalGeodesicInterpolation,
@@ -55,8 +57,12 @@ from ._operations import (
 __all__ = [
     "internal",
     "random",
+    "Isometry2d",
+    "Twist2d",
     "Isometry3d",
     "Twist3d",
+    "Rotation2d",
+    "Spin2d",
     "Rotation3d",
     "Spin3d",
     "Adj",

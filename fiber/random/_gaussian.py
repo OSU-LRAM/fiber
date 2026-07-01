@@ -25,13 +25,29 @@ import jax.numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
 from plum import dispatch
 
-from .._groups import se3, so3
+from .._groups import se2, se3, so2, so3
+from .._groups.se2 import Isometry2d, Twist2d
 from .._groups.se3 import Isometry3d, Twist3d
+from .._groups.so2 import Rotation2d, Spin2d
 from .._groups.so3 import Rotation3d, Spin3d
 
 
 @dispatch
 def gaussian(  # type: ignore[reportRedeclaration]
+    key: PRNGKeyArray,
+    mean: Rotation2d,
+    cov: Array,
+    shape: Optional[Sequence[int]] = None,
+    method: str = "cholesky",
+    left: bool = True,
+) -> tuple[Rotation2d, Spin2d]:
+    elements, vectors = so2.random.gaussian(key, mean.value, cov, shape, method, left)
+    point = Rotation2d(jnp.broadcast_to(mean.value, vectors.shape))
+    return Rotation2d.from_matrix(elements), Spin2d.from_matrix(vectors, point)
+
+
+@dispatch
+def gaussian(
     key: PRNGKeyArray,
     mean: Rotation3d,
     cov: Array,
@@ -42,6 +58,20 @@ def gaussian(  # type: ignore[reportRedeclaration]
     elements, vectors = so3.random.gaussian(key, mean.value, cov, shape, method, left)
     point = Rotation3d(jnp.broadcast_to(mean.value, vectors.shape))
     return Rotation3d.from_matrix(elements), Spin3d.from_matrix(vectors, point)
+
+
+@dispatch
+def gaussian(
+    key: PRNGKeyArray,
+    mean: Isometry2d,
+    cov: Array,
+    shape: Optional[Sequence[int]] = None,
+    method: str = "cholesky",
+    left: bool = True,
+) -> tuple[Isometry2d, Twist2d]:
+    elements, vectors = se2.random.gaussian(key, mean.value, cov, shape, method, left)
+    point = Isometry2d(jnp.broadcast_to(mean.value, vectors.shape))
+    return Isometry2d.from_matrix(elements), Twist2d.from_matrix(vectors, point)
 
 
 @dispatch
@@ -60,6 +90,18 @@ def gaussian(
 
 @dispatch
 def mean(  # type: ignore[reportRedeclaration]
+    samples: Rotation2d,
+    rtol: float = 1e-6,
+    atol=1e-6,
+    max_steps: int = 100,
+    throw: bool = True,
+) -> Rotation2d:
+    est_mean = so2.random.mean(samples.value, rtol, atol, max_steps, throw)
+    return Rotation2d.from_matrix(est_mean)
+
+
+@dispatch
+def mean(
     samples: Rotation3d,
     rtol: float = 1e-6,
     atol=1e-6,
@@ -68,6 +110,18 @@ def mean(  # type: ignore[reportRedeclaration]
 ) -> Rotation3d:
     est_mean = so3.random.mean(samples.value, rtol, atol, max_steps, throw)
     return Rotation3d.from_matrix(est_mean)
+
+
+@dispatch
+def mean(
+    samples: Isometry2d,
+    rtol: float = 1e-6,
+    atol=1e-6,
+    max_steps: int = 100,
+    throw: bool = True,
+) -> Isometry2d:
+    est_mean = se2.random.mean(samples.value, rtol, atol, max_steps, throw)
+    return Isometry2d.from_matrix(est_mean)
 
 
 @dispatch
@@ -83,8 +137,18 @@ def mean(
 
 
 @dispatch
-def cov(mean: Rotation3d, samples: Rotation3d) -> Array:  # type: ignore[reportRedeclaration]
+def cov(mean: Rotation2d, samples: Rotation2d) -> Array:  # type: ignore[reportRedeclaration]
+    return so2.random.cov(mean.value, samples.value)
+
+
+@dispatch
+def cov(mean: Rotation3d, samples: Rotation3d) -> Array:
     return so3.random.cov(mean.value, samples.value)
+
+
+@dispatch
+def cov(mean: Isometry2d, samples: Isometry2d) -> Array:
+    return se2.random.cov(mean.value, samples.value)
 
 
 @dispatch

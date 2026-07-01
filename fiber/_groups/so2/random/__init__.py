@@ -18,18 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from .._groups import se2, se3, so2, so3
-from .._vecfuncs import skew2, skew3, softclip, softnorm, vex2, vex3
+from ._gaussian import cov, gaussian, mean, normal
 
-__all__ = [
-    "se2",
-    "se3",
-    "so2",
-    "so3",
-    "skew2",
-    "skew3",
-    "softclip",
-    "softnorm",
-    "vex2",
-    "vex3",
-]
+__all__ = ["gaussian", "normal", "mean", "cov"]

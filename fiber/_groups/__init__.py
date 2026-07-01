@@ -18,6 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from . import se3, so3
+from . import se2, se3, so2, so3
 
-__all__ = ["se3", "so3"]
+__all__ = ["se2", "se3", "so2", "so3"]

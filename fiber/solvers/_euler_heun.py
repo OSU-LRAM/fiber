@@ -18,30 +18,29 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from typing import Any, Callable, ClassVar
+from typing import Any, Callable, ClassVar, Generic, TypeAlias, TypeVar
 
-import jax.numpy as jnp
+import equinox as eqx
 from diffrax import RESULTS, AbstractStratonovichSolver, AbstractTerm, MultiTerm
 from jaxtyping import Array
-from typing_extensions import TypeAlias
 
 from .._custom_types import VF, Args, BoolScalarLike, DenseInfo, RealScalarLike
-from .._elements import Isometry, Twist
-from .._interpolations._local_interpolation import LocalPartitionedGeodesicInterpolation
+from .._groups._element import AbstractTangentVector
+from .._local_interpolation import LocalLeftBundleInterpolation as LocalInterpolation
 from .._operations import rplus
-from .._utils import join_state, split_state
 
 _ErrorEstimate: TypeAlias = None
 _SolverState: TypeAlias = None
+_StochasticTerms: TypeAlias = MultiTerm[
+    tuple[AbstractTerm[Any, RealScalarLike], AbstractTerm]
+]
+
+_TangentVector = TypeVar("_TangentVector", bound=AbstractTangentVector)
 
 
-class EulerHeun(AbstractStratonovichSolver):
-    term_structure: ClassVar = MultiTerm[
-        tuple[AbstractTerm[Any, RealScalarLike], AbstractTerm]
-    ]
-    interpolation_cls: ClassVar[
-        Callable[..., LocalPartitionedGeodesicInterpolation]
-    ] = LocalPartitionedGeodesicInterpolation
+class EulerHeun(AbstractStratonovichSolver, Generic[_TangentVector]):
+    term_structure: ClassVar = _StochasticTerms
+    interpolation_cls: ClassVar[Callable[..., LocalInterpolation]] = LocalInterpolation
 
     def order(self, terms):
         return 1
@@ -51,46 +50,41 @@ class EulerHeun(AbstractStratonovichSolver):
 
     def init(
         self,
-        terms: MultiTerm[tuple[AbstractTerm[Any, RealScalarLike], AbstractTerm]],
+        terms: _StochasticTerms,
         t0: RealScalarLike,
         t1: RealScalarLike,
-        y0: Array,
+        y0: _TangentVector,
         args: Args,
     ) -> _SolverState:
         return None
 
     def step(
         self,
-        terms: MultiTerm[tuple[AbstractTerm[Any, RealScalarLike], AbstractTerm]],
+        terms: _StochasticTerms,
         t0: RealScalarLike,
         t1: RealScalarLike,
-        y0: Array,
+        y0: _TangentVector,
         args: Args,
         solver_state: _SolverState,
         made_jump: BoolScalarLike,
     ) -> tuple[Array, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
         del solver_state, made_jump
 
-        g0, v0 = split_state(y0)
-
         drift, diffusion = terms.terms
         dt = drift.contr(t0, t1)
-        dW = diffusion.contr(t0, t1)
+        dw = diffusion.contr(t0, t1)
 
         f0 = drift.vf_prod(t0, y0, args, dt)
-        h0 = diffusion.vf_prod(t0, y0, args, dW)
-        h0 = drift.term.vector_field.inverse_metric(t0, y0, h0, args)  # type: ignore
+        h0 = diffusion.vf_prod(t0, y0, args, dw)
+        h0 = drift.term.vector_field.cometric(t0, y0, h0, args)  # type: ignore
 
         y_prime = y0 + h0
-        h_prime = diffusion.vf_prod(t0, y_prime, args, dW)
-        h_prime = drift.term.vector_field.inverse_metric(t0, y_prime, h_prime, args)  # type: ignore
+        h_prime = diffusion.vf_prod(t0, y_prime, args, dw)
+        h_prime = drift.term.vector_field.cometric(t0, y_prime, h_prime, args)  # type: ignore
 
         vf = f0 + 0.5 * (h0 + h_prime)
-        g_tilde, v_tilde = jnp.split(vf, (Isometry.size,))
-
-        g1 = rplus(g0, Twist.unflatten(g_tilde))
-        v1 = v0 + v_tilde
-        y1 = join_state(g1, v1)
+        y1 = y0 + vf
+        y1 = eqx.tree_at(lambda w: w.point.value, y1, rplus(y0.point, vf.point).value)
 
         dense_info = dict(y0=y0, y1=y1)
         return y1, None, dense_info, None, RESULTS.successful

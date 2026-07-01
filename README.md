@@ -1,8 +1,9 @@
 # fiber
 
-fiber is a JAX library for performing SE(3) operations, targeting geometric mechanics
-applications. Some of the operations implemented include: `expm`, `logm`, `dexpm`,
-`dlogm`, and `adj`.
+fiber is a JAX library for performing Lie group operations, targeting geometric 
+mechanics applications. Some supported operations implemented include: `expm`, 
+`logm`, `dexpm`, `dlogm`, and `adj`. Please see the `examples` directory for
+additional information regarding the library usage.
 
 ## Installation
 

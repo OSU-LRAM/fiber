@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from . import numpy, random
+from . import internal, numpy, random
 from ._global_interpolation import GeodesicInterpolation, LeftBundleInterpolation
 from ._groups._element import AbstractGroupElement, AbstractTangentVector
 from ._groups.se2 import Isometry2d, Twist2d
@@ -57,6 +57,7 @@ from ._operations import (
 
 __all__ = [
     "random",
+    "internal",
     "Isometry2d",
     "Twist2d",
     "Isometry3d",

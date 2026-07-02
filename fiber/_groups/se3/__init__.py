@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from . import random
+from . import numpy, random
 from ._element import Isometry3d, Twist3d
 from ._operations import (
     Adj,
@@ -44,11 +44,11 @@ from ._operations import (
     lplus,
     rminus,
     rplus,
-    split_bundle,
 )
 
 __all__ = [
     "random",
+    "numpy",
     "Isometry3d",
     "Twist3d",
     "Adj",
@@ -74,5 +74,4 @@ __all__ = [
     "lplus",
     "rminus",
     "rplus",
-    "split_bundle",
 ]

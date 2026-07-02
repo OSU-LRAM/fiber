@@ -58,6 +58,13 @@ class Rotation2d(AbstractGroupElement):
         return self.angle
 
     @classmethod
+    def unflatten(cls, params: Array):
+        return cls(_unflatten(params))
+
+    def flatten(self) -> Array:
+        return _flatten(self.value)
+
+    @classmethod
     def eye(cls):
         return cls(jnp.eye(2))
 
@@ -93,6 +100,7 @@ class Spin2d(AbstractTangentVector[Rotation2d]):
     point: Rotation2d
     value: Array = eqx.field(converter=jnp.asarray)
     nparams: int = eqx.field(static=True, default=1)
+    nbundle: int = eqx.field(static=True, default=5)
 
     def __check_init__(self):
         if not isinstance(self.point, Rotation2d):
@@ -125,6 +133,14 @@ class Spin2d(AbstractTangentVector[Rotation2d]):
 
     def as_vector(self) -> Array:
         return vex2(self.value)
+
+    @classmethod
+    def from_bundle(cls, bundle: Array):
+        point, vector = _from_bundle(bundle)
+        return cls(Rotation2d(point), vector)
+
+    def as_bundle(self) -> Array:
+        return _as_bundle(self.value, self.point.value)
 
     @classmethod
     def concatenate(cls, vectors: Sequence[Spin2d]):
@@ -212,3 +228,24 @@ def _from_angle(angle: RealScalarLike) -> Array:
 @functools.partial(jnp.vectorize, signature="(n,n)->()")
 def _rotation_angle(mat: Array) -> RealScalarLike:
     return jnp.arctan2(mat[1, 0], mat[0, 0])
+
+
+@functools.partial(jnp.vectorize, signature="(n)->(m,m)")
+def _unflatten(params: Array) -> Array:
+    return params.reshape((2, 2))
+
+
+@functools.partial(jnp.vectorize, signature="(n,n)->(m)")
+def _flatten(matrix: Array) -> Array:
+    return matrix.flatten()
+
+
+@functools.partial(jnp.vectorize, signature="(n)->(m,m),(m,m)")
+def _from_bundle(bundle: Array) -> tuple[Array, Array]:
+    point, vector = jnp.split(bundle, (Rotation2d.nparams,))
+    return _unflatten(point), skew2(vector)
+
+
+@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(m)")
+def _as_bundle(vector: Array, point: Array) -> Array:
+    return jnp.concatenate([_flatten(point), vex2(vector)], axis=0)

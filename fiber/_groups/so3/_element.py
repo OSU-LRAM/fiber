@@ -70,6 +70,13 @@ class Rotation3d(AbstractGroupElement):
         return cast(Array, euler)
 
     @classmethod
+    def unflatten(cls, params: Array):
+        return cls(_unflatten(params))
+
+    def flatten(self) -> Array:
+        return _flatten(self.value)
+
+    @classmethod
     def eye(cls):
         return cls(jnp.eye(3))
 
@@ -105,6 +112,7 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
     point: Rotation3d
     value: Array = eqx.field(converter=jnp.asarray)
     nparams: int = eqx.field(static=True, default=3)
+    nbundle: int = eqx.field(static=True, default=12)
 
     def __check_init__(self):
         if not isinstance(self.point, Rotation3d):
@@ -137,6 +145,14 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
 
     def as_vector(self) -> Array:
         return vex3(self.value)
+
+    @classmethod
+    def from_bundle(cls, bundle: Array):
+        point, vector = _from_bundle(bundle)
+        return cls(Rotation3d(point), vector)
+
+    def as_bundle(self) -> Array:
+        return _as_bundle(self.value, self.point.value)
 
     @classmethod
     def concatenate(cls, vectors: Sequence[Spin3d]):
@@ -221,3 +237,24 @@ def _rotation_angle(mat: Array) -> RealScalarLike:
     cos = jnp.clip(cos, -1, 1)
     theta = jnp.arccos(cos)
     return theta
+
+
+@functools.partial(jnp.vectorize, signature="(n)->(m,m)")
+def _unflatten(params: Array) -> Array:
+    return params.reshape((2, 2))
+
+
+@functools.partial(jnp.vectorize, signature="(n,n)->(m)")
+def _flatten(matrix: Array) -> Array:
+    return matrix.flatten()
+
+
+@functools.partial(jnp.vectorize, signature="(n)->(m,m),(m,m)")
+def _from_bundle(bundle: Array) -> tuple[Array, Array]:
+    point, vector = jnp.split(bundle, (Rotation3d.nparams,))
+    return _unflatten(point), skew3(vector)
+
+
+@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(m)")
+def _as_bundle(vector: Array, point: Array) -> Array:
+    return jnp.concatenate([_flatten(point), vex3(vector)], axis=0)

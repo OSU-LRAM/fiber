@@ -18,10 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from .._groups.se2 import _operations as se2
-from .._groups.se3 import _operations as se3
-from .._groups.so2 import _operations as so2
-from .._groups.so3 import _operations as so3
+from .._groups.se2 import numpy as se2
+from .._groups.se3 import numpy as se3
+from .._groups.so2 import numpy as so2
+from .._groups.so3 import numpy as so3
 from .._vecfuncs import skew2, skew3, softclip, softnorm, vex2, vex3
 
 __all__ = [

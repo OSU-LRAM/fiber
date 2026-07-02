@@ -18,9 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from . import numpy, random
-from ._element import Rotation2d, Spin2d
-from ._operations import (
+from .. import random
+from .._element import _as_bundle as join_bundle
+from .._element import _from_bundle as split_bundle
+from .._operations import (
     Adj,
     Adj_inv,
     Adj_inv_op,
@@ -47,10 +48,6 @@ from ._operations import (
 )
 
 __all__ = [
-    "random",
-    "numpy",
-    "Rotation2d",
-    "Spin2d",
     "Adj",
     "Adj_inv",
     "Adj_inv_op",
@@ -74,4 +71,7 @@ __all__ = [
     "lplus",
     "rminus",
     "rplus",
+    "join_bundle",
+    "split_bundle",
+    "random",
 ]

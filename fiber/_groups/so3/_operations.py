@@ -132,7 +132,7 @@ def dexpm(w: Array) -> Array:
         lambda: (1 - jnp.cos(theta)) / (theta**2),
     )
     c = (1 - a) / (theta**2)
-    return a * jnp.eye(3) + b * w + c * (w @ w)
+    return jnp.eye(3) + b * w + c * (w @ w)
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
@@ -150,9 +150,8 @@ def logm(g: Array) -> Array:
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def dlogm(w: Array) -> Array:
-    cos = (jnp.trace(w) - 1) / 2
-    cos = softclip(cos, -1, 1)
-    theta = jnp.arccos(cos)
+    theta = softnorm(vex3(w))
+    cos = jnp.cos(theta)
     a = jax.lax.cond(
         jnp.isclose(theta, 0.0),  # type: ignore
         lambda: 1 - (theta**2 / 6) + (theta**4 / 120),
@@ -163,7 +162,11 @@ def dlogm(w: Array) -> Array:
         lambda: 0.5 - (theta**2 / 24) + (theta**4 / 720),
         lambda: (1 - cos) / (theta**2),
     )
-    e = (b - 0.5 * a) / (1 - cos)
+    e = jax.lax.cond(
+        jnp.isclose(theta, 0.0),  # type: ignore
+        lambda: (1 / 12) + (theta**2 / 720),
+        lambda: (b - 0.5 * a) / (1 - cos),
+    )
     return jnp.eye(3) - 0.5 * w + e * (w @ w)
 
 
@@ -185,8 +188,3 @@ def lminus(g: Array, h: Array) -> Array:
 @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
 def rminus(g: Array, h: Array) -> Array:
     return logm(inv(h) @ g)
-
-
-def split_bundle(s: Array, axis: int = 0) -> tuple[Array, Array]:
-    g, w = jnp.split(s, (9,), axis=axis)
-    return g, w

@@ -55,6 +55,13 @@ class Isometry3d(AbstractGroupElement):
         return self.value
 
     @classmethod
+    def unflatten(cls, params: Array):
+        return cls(_unflatten(params))
+
+    def flatten(self) -> Array:
+        return _flatten(self.value)
+
+    @classmethod
     def from_euclidean(
         cls,
         seq: str,
@@ -106,6 +113,7 @@ class Twist3d(AbstractTangentVector[Isometry3d]):
     point: Isometry3d
     value: Array = eqx.field(converter=jnp.asarray)
     nparams: int = eqx.field(static=True, default=6)
+    nbundle: int = eqx.field(static=True, default=18)
 
     def __check_init__(self):
         if not isinstance(self.point, Isometry3d):
@@ -139,6 +147,14 @@ class Twist3d(AbstractTangentVector[Isometry3d]):
 
     def as_vector(self) -> Array:
         return _as_vector(self.value)
+
+    @classmethod
+    def from_bundle(cls, bundle: Array):
+        point, vector = _from_bundle(bundle)
+        return cls(Isometry3d(point), vector)
+
+    def as_bundle(self) -> Array:
+        return _as_bundle(self.value, self.point.value)
 
     @classmethod
     def concatenate(cls, vectors: Sequence[Twist3d]):
@@ -233,3 +249,26 @@ def _from_vector(vec: Array) -> Array:
 def _as_vector(mat: Array) -> Array:
     lin, ang = mat[:3, 3], vex3(mat[:3, :3])
     return jnp.concatenate([lin, ang])
+
+
+@functools.partial(jnp.vectorize, signature="(n)->(m,m)")
+def _unflatten(params: Array) -> Array:
+    pos, rot = jnp.split(params, (3,))
+    mat = jnp.block([[rot.reshape((3, 3)), pos.reshape(3, 1)], [jnp.zeros(3), 1]])
+    return mat
+
+
+@functools.partial(jnp.vectorize, signature="(n,n)->(m)")
+def _flatten(matrix: Array) -> Array:
+    return jnp.concatenate([matrix[:3, 3], matrix[:3, :3].flatten()])
+
+
+@functools.partial(jnp.vectorize, signature="(n)->(m,m),(m,m)")
+def _from_bundle(bundle: Array) -> tuple[Array, Array]:
+    point, vector = jnp.split(bundle, (Isometry3d.nparams,))
+    return _unflatten(point), _from_vector(vector)
+
+
+@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(m)")
+def _as_bundle(vector: Array, point: Array) -> Array:
+    return jnp.concatenate([_flatten(point), _as_vector(vector)], axis=0)

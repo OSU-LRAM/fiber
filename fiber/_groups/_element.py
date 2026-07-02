@@ -52,6 +52,15 @@ class AbstractGroupElement(eqx.Module):
 
     @classmethod
     @abstractmethod
+    def unflatten(cls, params: Array):
+        raise NotImplementedError
+
+    @abstractmethod
+    def flatten(self) -> Array:
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
     def eye(cls):
         raise NotImplementedError
 
@@ -81,6 +90,7 @@ class AbstractTangentVector(eqx.Module, Generic[_GroupElement]):
     point: AbstractVar[_GroupElement]
     value: AbstractVar[Array]
     nparams: AbstractVar[int]
+    nbundle: AbstractVar[int]
 
     @property
     def shape(self):
@@ -106,6 +116,15 @@ class AbstractTangentVector(eqx.Module, Generic[_GroupElement]):
 
     @abstractmethod
     def as_vector(self) -> Array:
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
+    def from_bundle(cls, bundle: Array):
+        raise NotImplementedError
+
+    @abstractmethod
+    def as_bundle(self) -> Array:
         raise NotImplementedError
 
     @classmethod

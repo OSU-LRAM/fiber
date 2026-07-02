@@ -20,6 +20,7 @@
 
 from . import numpy, random
 from ._global_interpolation import GeodesicInterpolation, LeftBundleInterpolation
+from ._groups._element import AbstractGroupElement, AbstractTangentVector
 from ._groups.se2 import Isometry2d, Twist2d
 from ._groups.se3 import Isometry3d, Twist3d
 from ._groups.so2 import Rotation2d, Spin2d
@@ -92,4 +93,6 @@ __all__ = [
     "GeodesicInterpolation",
     "LeftBundleInterpolation",
     "numpy",
+    "AbstractGroupElement",
+    "AbstractTangentVector",
 ]

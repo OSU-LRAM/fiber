@@ -30,9 +30,13 @@ import numpy as np
 from jaxtyping import Array
 from plum import dispatch
 
-from ..._custom_types import ArrayLike
+from ..._custom_types import ArrayLike, RealScalarLike
 from ..._vecfuncs import skew2, vex2
-from .._element import AbstractGroupElement, AbstractTangentVector
+from .._element import (
+    AbstractCotangentVector,
+    AbstractGroupElement,
+    AbstractTangentVector,
+)
 from ..so2._element import Rotation2d, _normalize_rotation, _rotation_angle
 
 
@@ -113,7 +117,7 @@ class Twist2d(AbstractTangentVector[Isometry2d]):
     point: Isometry2d
     value: Array = eqx.field(converter=jnp.asarray)
     nparams: int = eqx.field(static=True, default=3)
-    nbundle: int = eqx.field(static=True, default=9)
+    ncoords: int = eqx.field(static=True, default=9)
 
     def __check_init__(self):
         if not isinstance(self.point, Isometry2d):
@@ -143,18 +147,18 @@ class Twist2d(AbstractTangentVector[Isometry2d]):
         if point is None:
             shape = vec.shape[:-1]
             point = Isometry2d(jnp.broadcast_to(jnp.eye(3), (*shape, 3, 3)))
-        return cls(point, _from_vector(jnp.asarray(vec)))
+        return cls(point, _from_vector(vec))
 
     def as_vector(self) -> Array:
         return _as_vector(self.value)
 
     @classmethod
-    def from_bundle(cls, bundle: Array):
-        point, vector = _from_bundle(bundle)
+    def from_coords(cls, coords: Array):
+        point, vector = _from_coords_vector(coords)
         return cls(Isometry2d(point), vector)
 
-    def as_bundle(self) -> Array:
-        return _as_bundle(self.value, self.point.value)
+    def as_coords(self) -> Array:
+        return _as_coords_vector(self.value, self.point.value)
 
     @classmethod
     def concatenate(cls, vectors: Sequence[Twist2d]):
@@ -206,18 +210,120 @@ class Twist2d(AbstractTangentVector[Isometry2d]):
     __rmul__ = __mul__
 
     @dispatch
-    def __div__(self, other: Twist2d) -> Twist2d:  # type: ignore[reportRedeclaration]
+    def __truediv__(self, other: Twist2d) -> Twist2d:  # type: ignore[reportRedeclaration]
         return Twist2d(self.point, self.value / other.value)
 
     @dispatch
-    def __div__(self, other: ArrayLike) -> Twist2d:
+    def __truediv__(self, other: ArrayLike) -> Twist2d:
         return Twist2d(self.point, self.value / other)
 
-    __rdiv__ = __div__
+    __rtruediv__ = __truediv__
 
     def __repr__(self) -> str:
         repr = np.array2string(cast(np.ndarray, self.value), prefix="Twist2d(")
         return f"Twist2d({repr})"
+
+
+class Wrench2d(AbstractCotangentVector[Isometry2d]):
+    point: Isometry2d
+    value: Array = eqx.field(converter=jnp.asarray)
+    nparams: int = eqx.field(static=True, default=3)
+    ncoords: int = eqx.field(static=True, default=9)
+
+    def __check_init__(self):
+        if not isinstance(self.point, Isometry2d):
+            raise ValueError(
+                "The cotangent vector point must be a `Isometry2d` instance!"
+            )
+
+        if self.point.shape[:-2] != self.value.shape[:-1]:
+            raise ValueError(
+                "Must have point.shape[:-2] == value.shape[:-1], that is to say "
+                "each cotangent vector should be assigned a point with matching "
+                "batch dimensions."
+            )
+
+    @classmethod
+    def from_vector(cls, vec: ArrayLike, point: Optional[Isometry2d] = None):
+        vec = jnp.asarray(vec)
+        if point is None:
+            shape = vec.shape[:-1]
+            point = Isometry2d(jnp.broadcast_to(jnp.eye(3), (*shape, 3, 3)))
+        return cls(point, vec)
+
+    def as_vector(self) -> Array:
+        return self.value
+
+    @classmethod
+    def from_coords(cls, coords: Array):
+        point, vector = _from_coords_covector(coords)
+        return cls(Isometry2d(point), vector)
+
+    def as_coords(self) -> Array:
+        return _as_coords_covector(self.value, self.point.value)
+
+    @classmethod
+    def concatenate(cls, vectors: Sequence[Wrench2d]):
+        points = Isometry2d.concatenate([vector.point for vector in vectors])
+        return cls(points, jnp.concatenate([vector.value for vector in vectors]))
+
+    def __getitem__(self, indexer):
+        if self.single:
+            raise TypeError("Single covector is not subscriptable.")
+        return Wrench2d(self.point[indexer], self.value[indexer])
+
+    def __iter__(self):
+        if self.single:
+            raise TypeError("Single covector is not iterable.")
+        for point, value in zip(self.point, self.value):
+            yield Wrench2d(point, value)
+
+    def pair(self, tangent: Twist2d) -> RealScalarLike:
+        return jnp.sum(self.value * tangent.as_vector(), axis=-1)
+
+    @dispatch
+    def __add__(self, other: Wrench2d) -> Wrench2d:  # type: ignore[reportRedeclaration]
+        return Wrench2d(self.point, self.value + other.value)
+
+    @dispatch
+    def __add__(self, other: ArrayLike) -> Wrench2d:
+        return Wrench2d(self.point, self.value + other)
+
+    __radd__ = __add__
+
+    @dispatch
+    def __sub__(self, other: Wrench2d) -> Wrench2d:  # type: ignore[reportRedeclaration]
+        return Wrench2d(self.point, self.value - other.value)
+
+    @dispatch
+    def __sub__(self, other: ArrayLike) -> Wrench2d:
+        return Wrench2d(self.point, self.value - other)
+
+    __rsub__ = __sub__
+
+    @dispatch
+    def __mul__(self, other: Wrench2d) -> Wrench2d:  # type: ignore[reportRedeclaration]
+        return Wrench2d(self.point, self.value * other.value)
+
+    @dispatch
+    def __mul__(self, other: ArrayLike) -> Wrench2d:
+        return Wrench2d(self.point, self.value * other)
+
+    __rmul__ = __mul__
+
+    @dispatch
+    def __truediv__(self, other: Wrench2d) -> Wrench2d:  # type: ignore[reportRedeclaration]
+        return Wrench2d(self.point, self.value / other.value)
+
+    @dispatch
+    def __truediv__(self, other: ArrayLike) -> Wrench2d:
+        return Wrench2d(self.point, self.value / other)
+
+    __rtruediv__ = __truediv__
+
+    def __repr__(self) -> str:
+        repr = np.array2string(cast(np.ndarray, self.value), prefix="Wrench2d(")
+        return f"Wrench2d({repr})"
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
@@ -269,11 +375,22 @@ def _flatten(matrix: Array) -> Array:
 
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m),(m,m)")
-def _from_bundle(bundle: Array) -> tuple[Array, Array]:
-    point, vector = jnp.split(bundle, (Isometry2d.nparams,))
+def _from_coords_vector(coords: Array) -> tuple[Array, Array]:
+    point, vector = jnp.split(coords, (Isometry2d.nparams,))
     return _unflatten(point), _from_vector(vector)
 
 
 @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(m)")
-def _as_bundle(vector: Array, point: Array) -> Array:
+def _as_coords_vector(vector: Array, point: Array) -> Array:
     return jnp.concatenate([_flatten(point), _as_vector(vector)], axis=0)
+
+
+@functools.partial(jnp.vectorize, signature="(n)->(m,m),(q)")
+def _from_coords_covector(coords: Array) -> tuple[Array, Array]:
+    point, vector = jnp.split(coords, (Isometry2d.nparams,))
+    return _unflatten(point), vector
+
+
+@functools.partial(jnp.vectorize, signature="(n),(m,m)->(q)")
+def _as_coords_covector(vector: Array, point: Array) -> Array:
+    return jnp.concatenate([_flatten(point), vector], axis=0)

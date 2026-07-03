@@ -19,8 +19,8 @@
 # THE SOFTWARE.
 
 from .. import random
-from .._element import _as_bundle as join_bundle
-from .._element import _from_bundle as split_bundle
+from .._element import _as_coords_vector as join_bundle
+from .._element import _from_coords_vector as split_bundle
 from .._operations import (
     Adj,
     Adj_inv,

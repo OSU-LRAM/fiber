@@ -3,9 +3,9 @@ name = "fiber"
 version = "0.1.0"
 description = "A JAX library for SE(3) operations."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
-    "diffrax>=0.7.0",
+    "diffrax>=0.7.2",
     "equinox>=0.13.2",
     "jax>=0.4.38",
     "plum-dispatch>=2.9.0",

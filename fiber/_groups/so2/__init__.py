@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 from . import numpy, random
-from ._element import Rotation2d, Spin2d
+from ._element import Moment2d, Rotation2d, Spin2d
 from ._operations import (
     Adj,
     Adj_inv,
@@ -51,6 +51,7 @@ __all__ = [
     "numpy",
     "Rotation2d",
     "Spin2d",
+    "Moment2d",
     "Adj",
     "Adj_inv",
     "Adj_inv_op",

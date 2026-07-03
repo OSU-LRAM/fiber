@@ -19,7 +19,7 @@
 # THE SOFTWARE.
 
 from . import numpy, random
-from ._element import Isometry2d, Twist2d
+from ._element import Isometry2d, Twist2d, Wrench2d
 from ._operations import (
     Adj,
     Adj_inv,
@@ -74,4 +74,5 @@ __all__ = [
     "lplus",
     "rminus",
     "rplus",
+    "Wrench2d",
 ]

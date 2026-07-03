@@ -43,9 +43,11 @@ class EulerHeun(AbstractStratonovichSolver, Generic[_TangentVector]):
     interpolation_cls: ClassVar[Callable[..., LocalInterpolation]] = LocalInterpolation
 
     def order(self, terms):
+        del terms
         return 1
 
     def strong_order(self, terms):
+        del terms
         return 0.5
 
     def init(
@@ -56,6 +58,18 @@ class EulerHeun(AbstractStratonovichSolver, Generic[_TangentVector]):
         y0: _TangentVector,
         args: Args,
     ) -> _SolverState:
+        del t0, t1, y0, args
+        drift, diffusion = terms.terms
+        try:
+            cometric = getattr(drift.term.vector_field, "cometric")  # type: ignore
+            assert callable(cometric)
+        except Exception:
+            raise ValueError(
+                "Expected the drift term to implement the `cometric` function. The "
+                "`EulerHeun` solver is designed for hypoelliptic diffusion processes "
+                "with noise entering the system as a covector (which must be mapped "
+                "back to the tangent space using the cometric)."
+            )
         return None
 
     def step(
@@ -67,7 +81,7 @@ class EulerHeun(AbstractStratonovichSolver, Generic[_TangentVector]):
         args: Args,
         solver_state: _SolverState,
         made_jump: BoolScalarLike,
-    ) -> tuple[Array, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
+    ) -> tuple[_TangentVector, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
         del solver_state, made_jump
 
         drift, diffusion = terms.terms

@@ -22,7 +22,6 @@ from typing import Callable, ClassVar, Generic, TypeVar
 
 import equinox as eqx
 from diffrax import RESULTS, AbstractItoSolver, AbstractTerm
-from jaxtyping import Array
 from typing_extensions import TypeAlias
 
 from .._custom_types import VF, Args, BoolScalarLike, DenseInfo, RealScalarLike
@@ -41,9 +40,11 @@ class LieEuler(AbstractItoSolver, Generic[_TangentVector]):
     interpolation_cls: ClassVar[Callable[..., LocalInterpolation]] = LocalInterpolation
 
     def order(self, terms):
+        del terms
         return 1
 
     def strong_order(self, terms):
+        del terms
         return 0.5
 
     def init(
@@ -54,6 +55,7 @@ class LieEuler(AbstractItoSolver, Generic[_TangentVector]):
         y0: _TangentVector,
         args: Args,
     ) -> _SolverState:
+        del terms, t0, t1, y0, args
         return None
 
     def step(
@@ -65,7 +67,7 @@ class LieEuler(AbstractItoSolver, Generic[_TangentVector]):
         args: Args,
         solver_state: _SolverState,
         made_jump: BoolScalarLike,
-    ) -> tuple[Array, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
+    ) -> tuple[_TangentVector, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
         del solver_state, made_jump
 
         vf = terms.vf_prod(t0, y0, args, terms.contr(t0, t1))
@@ -79,7 +81,7 @@ class LieEuler(AbstractItoSolver, Generic[_TangentVector]):
         self,
         terms: AbstractTerm,
         t0: RealScalarLike,
-        y0: Array,
+        y0: _TangentVector,
         args: Args,
     ) -> VF:
         return terms.vf(t0, y0, args)

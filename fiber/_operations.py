@@ -22,10 +22,10 @@ from jaxtyping import Array
 from plum import dispatch
 
 from ._groups import se2, se3, so2, so3
-from ._groups.se2 import Isometry2d, Twist2d
-from ._groups.se3 import Isometry3d, Twist3d
-from ._groups.so2 import Rotation2d, Spin2d
-from ._groups.so3 import Rotation3d, Spin3d
+from ._groups.se2 import Isometry2d, Twist2d, Wrench2d
+from ._groups.se3 import Isometry3d, Twist3d, Wrench3d
+from ._groups.so2 import Moment2d, Rotation2d, Spin2d
+from ._groups.so3 import Moment3d, Rotation3d, Spin3d
 
 
 @dispatch
@@ -89,23 +89,23 @@ def adj_op(w: Twist3d) -> Array:
 
 
 @dispatch
-def dadj(w: Spin2d, p: Array) -> Array:  # type: ignore[reportRedeclaration]
-    return so2.dadj(w.value, p)
+def dadj(w: Spin2d, p: Moment2d) -> Moment2d:  # type: ignore[reportRedeclaration]
+    return Moment2d.from_vector(so2.dadj(w.value, p.value))
 
 
 @dispatch
-def dadj(w: Spin3d, p: Array) -> Array:
-    return so3.dadj(w.value, p)
+def dadj(w: Spin3d, p: Moment3d) -> Moment3d:
+    return Moment3d.from_vector(so3.dadj(w.value, p.value))
 
 
 @dispatch
-def dadj(w: Twist2d, p: Array) -> Array:
-    return se2.dadj(w.value, p)
+def dadj(w: Twist2d, p: Wrench2d) -> Wrench2d:
+    return Wrench2d.from_vector(se2.dadj(w.value, p.value))
 
 
 @dispatch
-def dadj(w: Twist3d, p: Array) -> Array:
-    return se3.dadj(w.value, p)
+def dadj(w: Twist3d, p: Wrench3d) -> Wrench3d:
+    return Wrench3d.from_vector(se3.dadj(w.value, p.value))
 
 
 @dispatch
@@ -129,23 +129,23 @@ def dadj_op(w: Twist3d) -> Array:
 
 
 @dispatch
-def dadj_inv(w: Spin2d, p: Array) -> Array:  # type: ignore[reportRedeclaration]
-    return so2.dadj_inv(w.value, p)
+def dadj_inv(w: Spin2d, p: Moment2d) -> Moment2d:  # type: ignore[reportRedeclaration]
+    return Moment2d.from_vector(so2.dadj_inv(w.value, p.value))
 
 
 @dispatch
-def dadj_inv(w: Spin3d, p: Array) -> Array:
-    return so3.dadj_inv(w.value, p)
+def dadj_inv(w: Spin3d, p: Moment3d) -> Moment3d:
+    return Moment3d.from_vector(so3.dadj_inv(w.value, p.value))
 
 
 @dispatch
-def dadj_inv(w: Twist2d, p: Array) -> Array:
-    return se2.dadj_inv(w.value, p)
+def dadj_inv(w: Twist2d, p: Wrench2d) -> Wrench2d:
+    return Wrench2d.from_vector(se2.dadj_inv(w.value, p.value))
 
 
 @dispatch
-def dadj_inv(w: Twist3d, p: Array) -> Array:
-    return se3.dadj_inv(w.value, p)
+def dadj_inv(w: Twist3d, p: Wrench3d) -> Wrench3d:
+    return Wrench3d.from_vector(se3.dadj_inv(w.value, p.value))
 
 
 @dispatch
@@ -249,23 +249,23 @@ def Adj_inv_op(g: Isometry3d) -> Array:
 
 
 @dispatch
-def dAdj(g: Rotation2d, p: Array) -> Array:  # type: ignore[reportRedeclaration]
-    return so2.dAdj(g.value, p)
+def dAdj(g: Rotation2d, p: Moment2d) -> Moment2d:  # type: ignore[reportRedeclaration]
+    return Moment2d.from_vector(so2.dAdj(g.value, p.value))
 
 
 @dispatch
-def dAdj(g: Rotation3d, p: Array) -> Array:
-    return so3.dAdj(g.value, p)
+def dAdj(g: Rotation3d, p: Moment3d) -> Moment3d:
+    return Moment3d.from_vector(so3.dAdj(g.value, p.value))
 
 
 @dispatch
-def dAdj(g: Isometry2d, p: Array) -> Array:
-    return se2.dAdj(g.value, p)
+def dAdj(g: Isometry2d, p: Wrench2d) -> Wrench2d:
+    return Wrench2d.from_vector(se2.dAdj(g.value, p.value))
 
 
 @dispatch
-def dAdj(g: Isometry3d, p: Array) -> Array:
-    return se3.dAdj(g.value, p)
+def dAdj(g: Isometry3d, p: Wrench3d) -> Wrench3d:
+    return Wrench3d.from_vector(se3.dAdj(g.value, p.value))
 
 
 @dispatch
@@ -289,23 +289,23 @@ def dAdj_op(g: Isometry3d) -> Array:
 
 
 @dispatch
-def dAdj_inv(g: Rotation2d, p: Array) -> Array:  # type: ignore[reportRedeclaration]
-    return so2.dAdj_inv(g.value, p)
+def dAdj_inv(g: Rotation2d, p: Moment2d) -> Moment2d:  # type: ignore[reportRedeclaration]
+    return Moment2d.from_vector(so2.dAdj_inv(g.value, p.value))
 
 
 @dispatch
-def dAdj_inv(g: Rotation3d, p: Array) -> Array:
-    return so3.dAdj_inv(g.value, p)
+def dAdj_inv(g: Rotation3d, p: Moment3d) -> Moment3d:
+    return Moment3d.from_vector(so3.dAdj_inv(g.value, p.value))
 
 
 @dispatch
-def dAdj_inv(g: Isometry2d, p: Array) -> Array:
-    return se2.dAdj_inv(g.value, p)
+def dAdj_inv(g: Isometry2d, p: Wrench2d) -> Wrench2d:
+    return Wrench2d.from_vector(se2.dAdj_inv(g.value, p.value))
 
 
 @dispatch
-def dAdj_inv(g: Isometry3d, p: Array) -> Array:
-    return se3.dAdj_inv(g.value, p)
+def dAdj_inv(g: Isometry3d, p: Wrench3d) -> Wrench3d:
+    return Wrench3d.from_vector(se3.dAdj_inv(g.value, p.value))
 
 
 @dispatch

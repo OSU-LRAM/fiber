@@ -20,11 +20,15 @@
 
 from . import internal, numpy, random
 from ._global_interpolation import GeodesicInterpolation, LeftBundleInterpolation
-from ._groups._element import AbstractGroupElement, AbstractTangentVector
-from ._groups.se2 import Isometry2d, Twist2d
-from ._groups.se3 import Isometry3d, Twist3d
-from ._groups.so2 import Rotation2d, Spin2d
-from ._groups.so3 import Rotation3d, Spin3d
+from ._groups._element import (
+    AbstractCotangentVector,
+    AbstractGroupElement,
+    AbstractTangentVector,
+)
+from ._groups.se2 import Isometry2d, Twist2d, Wrench2d
+from ._groups.se3 import Isometry3d, Twist3d, Wrench3d
+from ._groups.so2 import Moment2d, Rotation2d, Spin2d
+from ._groups.so3 import Moment3d, Rotation3d, Spin3d
 from ._local_interpolation import (
     LocalGeodesicInterpolation,
     LocalLeftBundleInterpolation,
@@ -60,12 +64,16 @@ __all__ = [
     "internal",
     "Isometry2d",
     "Twist2d",
+    "Wrench2d",
     "Isometry3d",
     "Twist3d",
+    "Wrench3d",
     "Rotation2d",
     "Spin2d",
+    "Moment2d",
     "Rotation3d",
     "Spin3d",
+    "Moment3d",
     "Adj",
     "Adj_inv",
     "Adj_inv_op",
@@ -96,4 +104,5 @@ __all__ = [
     "numpy",
     "AbstractGroupElement",
     "AbstractTangentVector",
+    "AbstractCotangentVector",
 ]

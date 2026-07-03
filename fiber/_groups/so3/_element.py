@@ -31,7 +31,11 @@ from plum import dispatch
 
 from ..._custom_types import ArrayLike, RealScalarLike
 from ..._vecfuncs import skew3, softnorm, vex3
-from .._element import AbstractGroupElement, AbstractTangentVector
+from .._element import (
+    AbstractCotangentVector,
+    AbstractGroupElement,
+    AbstractTangentVector,
+)
 
 
 class Rotation3d(AbstractGroupElement):
@@ -112,7 +116,7 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
     point: Rotation3d
     value: Array = eqx.field(converter=jnp.asarray)
     nparams: int = eqx.field(static=True, default=3)
-    nbundle: int = eqx.field(static=True, default=12)
+    ncoords: int = eqx.field(static=True, default=12)
 
     def __check_init__(self):
         if not isinstance(self.point, Rotation3d):
@@ -147,12 +151,12 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
         return vex3(self.value)
 
     @classmethod
-    def from_bundle(cls, bundle: Array):
-        point, vector = _from_bundle(bundle)
+    def from_coords(cls, coords: Array):
+        point, vector = _from_coords_vector(coords)
         return cls(Rotation3d(point), vector)
 
-    def as_bundle(self) -> Array:
-        return _as_bundle(self.value, self.point.value)
+    def as_coords(self) -> Array:
+        return _as_coords_vector(self.value, self.point.value)
 
     @classmethod
     def concatenate(cls, vectors: Sequence[Spin3d]):
@@ -204,18 +208,120 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
     __rmul__ = __mul__
 
     @dispatch
-    def __div__(self, other: Spin3d) -> Spin3d:  # type: ignore[reportRedeclaration]
+    def __truediv__(self, other: Spin3d) -> Spin3d:  # type: ignore[reportRedeclaration]
         return Spin3d(self.point, self.value / other.value)
 
     @dispatch
-    def __div__(self, other: ArrayLike) -> Spin3d:
+    def __truediv__(self, other: ArrayLike) -> Spin3d:
         return Spin3d(self.point, self.value / other)
 
-    __rdiv__ = __div__
+    __rtruediv__ = __truediv__
 
     def __repr__(self) -> str:
         repr = np.array2string(cast(np.ndarray, self.value), prefix="Spin3d(")
         return f"Spin3d({repr})"
+
+
+class Moment3d(AbstractCotangentVector[Rotation3d]):
+    point: Rotation3d
+    value: Array = eqx.field(converter=jnp.asarray)
+    nparams: int = eqx.field(static=True, default=3)
+    ncoords: int = eqx.field(static=True, default=12)
+
+    def __check_init__(self):
+        if not isinstance(self.point, Rotation3d):
+            raise ValueError(
+                "The cotangent vector point must be a Rotation3d instance"
+            )
+
+        if self.point.shape[:-2] != self.value.shape[:-1]:
+            raise ValueError(
+                "Must have point.shape[:-2] == value.shape[:-1], that is to say "
+                "each cotangent vector should be assigned a point with matching "
+                "batch dimensions."
+            )
+
+    @classmethod
+    def from_vector(cls, vec: ArrayLike, point: Optional[Rotation3d] = None):
+        vec = jnp.asarray(vec)
+        if point is None:
+            shape = vec.shape[:-1]
+            point = Rotation3d(jnp.broadcast_to(jnp.eye(3), (*shape, 3, 3)))
+        return cls(point, vec)
+
+    def as_vector(self) -> Array:
+        return self.value
+
+    @classmethod
+    def from_coords(cls, coords: Array):
+        point, vector = _from_coords_covector(coords)
+        return cls(Rotation3d(point), vector)
+
+    def as_coords(self) -> Array:
+        return _as_coords_covector(self.value, self.point.value)
+
+    @classmethod
+    def concatenate(cls, vectors: Sequence[Moment3d]):
+        points = Rotation3d.concatenate([vector.point for vector in vectors])
+        return cls(points, jnp.concatenate([vector.value for vector in vectors]))
+
+    def __getitem__(self, indexer):
+        if self.single:
+            raise TypeError("Single covector is not subscriptable.")
+        return Moment3d(self.point[indexer], self.value[indexer])
+
+    def __iter__(self):
+        if self.single:
+            raise TypeError("Single covector is not iterable.")
+        for point, value in zip(self.point, self.value):
+            yield Moment3d(point, value)
+
+    def pair(self, tangent: Spin3d) -> RealScalarLike:
+        return jnp.sum(self.value * tangent.as_vector(), axis=-1)
+
+    @dispatch
+    def __add__(self, other: Moment3d) -> Moment3d:  # type: ignore[reportRedeclaration]
+        return Moment3d(self.point, self.value + other.value)
+
+    @dispatch
+    def __add__(self, other: ArrayLike) -> Moment3d:
+        return Moment3d(self.point, self.value + other)
+
+    __radd__ = __add__
+
+    @dispatch
+    def __sub__(self, other: Moment3d) -> Moment3d:  # type: ignore[reportRedeclaration]
+        return Moment3d(self.point, self.value - other.value)
+
+    @dispatch
+    def __sub__(self, other: ArrayLike) -> Moment3d:
+        return Moment3d(self.point, self.value - other)
+
+    __rsub__ = __sub__
+
+    @dispatch
+    def __mul__(self, other: Moment3d) -> Moment3d:  # type: ignore[reportRedeclaration]
+        return Moment3d(self.point, self.value * other.value)
+
+    @dispatch
+    def __mul__(self, other: ArrayLike) -> Moment3d:
+        return Moment3d(self.point, self.value * other)
+
+    __rmul__ = __mul__
+
+    @dispatch
+    def __truediv__(self, other: Moment3d) -> Moment3d:  # type: ignore[reportRedeclaration]
+        return Moment3d(self.point, self.value / other.value)
+
+    @dispatch
+    def __truediv__(self, other: ArrayLike) -> Moment3d:
+        return Moment3d(self.point, self.value / other)
+
+    __rtruediv__ = __truediv__
+
+    def __repr__(self) -> str:
+        repr = np.array2string(cast(np.ndarray, self.value), prefix="Moment3d(")
+        return f"Moment3d({repr})"
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
@@ -241,7 +347,7 @@ def _rotation_angle(mat: Array) -> RealScalarLike:
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m)")
 def _unflatten(params: Array) -> Array:
-    return params.reshape((2, 2))
+    return params.reshape((3, 3))
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m)")
@@ -250,11 +356,22 @@ def _flatten(matrix: Array) -> Array:
 
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m),(m,m)")
-def _from_bundle(bundle: Array) -> tuple[Array, Array]:
-    point, vector = jnp.split(bundle, (Rotation3d.nparams,))
+def _from_coords_vector(coords: Array) -> tuple[Array, Array]:
+    point, vector = jnp.split(coords, (Rotation3d.nparams,))
     return _unflatten(point), skew3(vector)
 
 
 @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(m)")
-def _as_bundle(vector: Array, point: Array) -> Array:
+def _as_coords_vector(vector: Array, point: Array) -> Array:
     return jnp.concatenate([_flatten(point), vex3(vector)], axis=0)
+
+
+@functools.partial(jnp.vectorize, signature="(n)->(m,m),(q)")
+def _from_coords_covector(coords: Array) -> tuple[Array, Array]:
+    point, vector = jnp.split(coords, (Rotation3d.nparams,))
+    return _unflatten(point), vector
+
+
+@functools.partial(jnp.vectorize, signature="(n),(m,m)->(q)")
+def _as_coords_covector(vector: Array, point: Array) -> Array:
+    return jnp.concatenate([_flatten(point), vector], axis=0)

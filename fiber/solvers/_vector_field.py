@@ -18,60 +18,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from .. import random
-from .._element import _as_coords_vector as join_bundle
-from .._element import _from_coords_vector as split_bundle
-from .._operations import (
-    Adj,
-    Adj_inv,
-    Adj_inv_op,
-    Adj_op,
-    adj,
-    adj_op,
-    dAdj,
-    dadj,
-    dAdj_inv,
-    dadj_inv,
-    dAdj_inv_op,
-    dadj_inv_op,
-    dAdj_op,
-    dadj_op,
-    dexpm,
-    dlogm,
-    expm,
-    inv,
-    lminus,
-    logm,
-    lplus,
-    rminus,
-    rplus,
-)
+from abc import abstractmethod
+from typing import Generic, TypeVar
 
-__all__ = [
-    "Adj",
-    "Adj_inv",
-    "Adj_inv_op",
-    "Adj_op",
-    "adj",
-    "adj_op",
-    "dAdj",
-    "dadj",
-    "dAdj_inv",
-    "dadj_inv",
-    "dAdj_inv_op",
-    "dadj_inv_op",
-    "dAdj_op",
-    "dadj_op",
-    "dexpm",
-    "dlogm",
-    "expm",
-    "inv",
-    "lminus",
-    "logm",
-    "lplus",
-    "rminus",
-    "rplus",
-    "join_bundle",
-    "split_bundle",
-    "random",
-]
+import equinox as eqx
+from jaxtyping import ScalarLike
+
+from .._custom_types import Args
+from .._groups._element import AbstractCotangentVector, AbstractTangentVector
+
+_Vector = TypeVar("_Vector", bound=AbstractTangentVector)
+_Covector = TypeVar("_Covector", bound=AbstractCotangentVector)
+
+
+class AbstractImplicitVectorField(eqx.Module, Generic[_Vector, _Covector]):
+    """Base class for a vector field described implicitly."""
+
+    @abstractmethod
+    def implicit_step(self, t: ScalarLike, y: _Vector, args: Args) -> _Covector:
+        raise NotImplementedError

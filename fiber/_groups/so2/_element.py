@@ -32,7 +32,11 @@ from plum import dispatch
 
 from ..._custom_types import ArrayLike, RealScalarLike
 from ..._vecfuncs import skew2, softnorm, vex2
-from .._element import AbstractGroupElement, AbstractTangentVector
+from .._element import (
+    AbstractCotangentVector,
+    AbstractGroupElement,
+    AbstractTangentVector,
+)
 
 
 class Rotation2d(AbstractGroupElement):
@@ -100,7 +104,7 @@ class Spin2d(AbstractTangentVector[Rotation2d]):
     point: Rotation2d
     value: Array = eqx.field(converter=jnp.asarray)
     nparams: int = eqx.field(static=True, default=1)
-    nbundle: int = eqx.field(static=True, default=5)
+    ncoords: int = eqx.field(static=True, default=5)
 
     def __check_init__(self):
         if not isinstance(self.point, Rotation2d):
@@ -135,12 +139,12 @@ class Spin2d(AbstractTangentVector[Rotation2d]):
         return vex2(self.value)
 
     @classmethod
-    def from_bundle(cls, bundle: Array):
-        point, vector = _from_bundle(bundle)
+    def from_coords(cls, coords: Array):
+        point, vector = _from_coords_vector(coords)
         return cls(Rotation2d(point), vector)
 
-    def as_bundle(self) -> Array:
-        return _as_bundle(self.value, self.point.value)
+    def as_coords(self) -> Array:
+        return _as_coords_vector(self.value, self.point.value)
 
     @classmethod
     def concatenate(cls, vectors: Sequence[Spin2d]):
@@ -192,18 +196,126 @@ class Spin2d(AbstractTangentVector[Rotation2d]):
     __rmul__ = __mul__
 
     @dispatch
-    def __div__(self, other: Spin2d) -> Spin2d:  # type: ignore[reportRedeclaration]
+    def __truediv__(self, other: Spin2d) -> Spin2d:  # type: ignore[reportRedeclaration]
         return Spin2d(self.point, self.value / other.value)
 
     @dispatch
-    def __div__(self, other: ArrayLike) -> Spin2d:
+    def __truediv__(self, other: ArrayLike) -> Spin2d:
         return Spin2d(self.point, self.value / other)
 
-    __rdiv__ = __div__
+    __rtruediv__ = __truediv__
 
     def __repr__(self) -> str:
         repr = np.array2string(cast(np.ndarray, self.value), prefix="Spin2d(")
         return f"Spin2d({repr})"
+
+
+class Moment2d(AbstractCotangentVector[Rotation2d]):
+    point: Rotation2d
+    value: Array = eqx.field(converter=jnp.asarray)
+    nparams: int = eqx.field(static=True, default=1)
+    ncoords: int = eqx.field(static=True, default=5)
+
+    @property
+    def single(self) -> bool:
+        # so(2)* is 1-dimensional, so `value` is a bare scalar per batch element
+        # (no trailing component axis, matching `Spin2d.as_vector()`'s convention).
+        return self.value.ndim == 0
+
+    def __check_init__(self):
+        if not isinstance(self.point, Rotation2d):
+            raise ValueError(
+                "The cotangent vector point must be a Rotation2d instance"
+            )
+
+        if self.point.shape[:-2] != self.value.shape:
+            raise ValueError(
+                "Must have point.shape[:-2] == value.shape, that is to say "
+                "each cotangent vector should be assigned a point with matching "
+                "batch dimensions."
+            )
+
+    @classmethod
+    def from_vector(cls, vec: ArrayLike, point: Optional[Rotation2d] = None):
+        vec = jnp.asarray(vec)
+        if point is None:
+            shape = vec.shape
+            point = Rotation2d(jnp.broadcast_to(jnp.eye(2), (*shape, 2, 2)))
+        return cls(point, vec)
+
+    def as_vector(self) -> Array:
+        return self.value
+
+    @classmethod
+    def from_coords(cls, coords: Array):
+        point, vector = _from_coords_covector(coords)
+        return cls(Rotation2d(point), vector)
+
+    def as_coords(self) -> Array:
+        return _as_coords_covector(self.value, self.point.value)
+
+    @classmethod
+    def concatenate(cls, vectors: Sequence[Moment2d]):
+        points = Rotation2d.concatenate([vector.point for vector in vectors])
+        return cls(points, jnp.concatenate([vector.value for vector in vectors]))
+
+    def __getitem__(self, indexer):
+        if self.single:
+            raise TypeError("Single covector is not subscriptable.")
+        return Moment2d(self.point[indexer], self.value[indexer])
+
+    def __iter__(self):
+        if self.single:
+            raise TypeError("Single covector is not iterable.")
+        for point, value in zip(self.point, self.value):
+            yield Moment2d(point, value)
+
+    def pair(self, tangent: Spin2d) -> RealScalarLike:
+        return self.value * tangent.as_vector()
+
+    @dispatch
+    def __add__(self, other: Moment2d) -> Moment2d:  # type: ignore[reportRedeclaration]
+        return Moment2d(self.point, self.value + other.value)
+
+    @dispatch
+    def __add__(self, other: ArrayLike) -> Moment2d:
+        return Moment2d(self.point, self.value + other)
+
+    __radd__ = __add__
+
+    @dispatch
+    def __sub__(self, other: Moment2d) -> Moment2d:  # type: ignore[reportRedeclaration]
+        return Moment2d(self.point, self.value - other.value)
+
+    @dispatch
+    def __sub__(self, other: ArrayLike) -> Moment2d:
+        return Moment2d(self.point, self.value - other)
+
+    __rsub__ = __sub__
+
+    @dispatch
+    def __mul__(self, other: Moment2d) -> Moment2d:  # type: ignore[reportRedeclaration]
+        return Moment2d(self.point, self.value * other.value)
+
+    @dispatch
+    def __mul__(self, other: ArrayLike) -> Moment2d:
+        return Moment2d(self.point, self.value * other)
+
+    __rmul__ = __mul__
+
+    @dispatch
+    def __truediv__(self, other: Moment2d) -> Moment2d:  # type: ignore[reportRedeclaration]
+        return Moment2d(self.point, self.value / other.value)
+
+    @dispatch
+    def __truediv__(self, other: ArrayLike) -> Moment2d:
+        return Moment2d(self.point, self.value / other)
+
+    __rtruediv__ = __truediv__
+
+    def __repr__(self) -> str:
+        repr = np.array2string(cast(np.ndarray, self.value), prefix="Moment2d(")
+        return f"Moment2d({repr})"
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
@@ -241,11 +353,22 @@ def _flatten(matrix: Array) -> Array:
 
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m),(m,m)")
-def _from_bundle(bundle: Array) -> tuple[Array, Array]:
-    point, vector = jnp.split(bundle, (Rotation2d.nparams,))
+def _from_coords_vector(coords: Array) -> tuple[Array, Array]:
+    point, vector = jnp.split(coords, (Rotation2d.nparams,))
     return _unflatten(point), skew2(vector)
 
 
 @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(m)")
-def _as_bundle(vector: Array, point: Array) -> Array:
-    return jnp.concatenate([_flatten(point), vex2(vector)], axis=0)
+def _as_coords_vector(vector: Array, point: Array) -> Array:
+    return jnp.concatenate([_flatten(point), jnp.reshape(vex2(vector), (1,))], axis=0)
+
+
+@functools.partial(jnp.vectorize, signature="(n)->(m,m),()")
+def _from_coords_covector(coords: Array) -> tuple[Array, RealScalarLike]:
+    point, vector = jnp.split(coords, (Rotation2d.nparams,))
+    return _unflatten(point), vector[0]
+
+
+@functools.partial(jnp.vectorize, signature="(),(n,n)->(m)")
+def _as_coords_covector(vector: RealScalarLike, point: Array) -> Array:
+    return jnp.concatenate([_flatten(point), jnp.reshape(vector, (1,))], axis=0)

@@ -26,7 +26,7 @@ import equinox as eqx
 from equinox import AbstractVar
 from jaxtyping import Array
 
-from .._custom_types import ArrayLike
+from .._custom_types import ArrayLike, RealScalarLike
 
 
 class AbstractGroupElement(eqx.Module):
@@ -39,7 +39,10 @@ class AbstractGroupElement(eqx.Module):
 
     @property
     def single(self) -> bool:
-        return self.value.ndim == 1
+        # `value` is a matrix (n, n); a single element has no batch axis on
+        # top of those two, matching jax.scipy.spatial.transform.Rotation's
+        # convention of comparing ndim to the core representation's rank.
+        return self.value.ndim == 2
 
     @classmethod
     @abstractmethod
@@ -90,7 +93,7 @@ class AbstractTangentVector(eqx.Module, Generic[_GroupElement]):
     point: AbstractVar[_GroupElement]
     value: AbstractVar[Array]
     nparams: AbstractVar[int]
-    nbundle: AbstractVar[int]
+    ncoords: AbstractVar[int]
 
     @property
     def shape(self):
@@ -98,7 +101,9 @@ class AbstractTangentVector(eqx.Module, Generic[_GroupElement]):
 
     @property
     def single(self) -> bool:
-        return self.value.ndim == 1
+        # `value` holds the matrix Lie-algebra representation (n, n); see
+        # `AbstractGroupElement.single` for why this compares to ndim 2.
+        return self.value.ndim == 2
 
     @classmethod
     @abstractmethod
@@ -120,11 +125,66 @@ class AbstractTangentVector(eqx.Module, Generic[_GroupElement]):
 
     @classmethod
     @abstractmethod
-    def from_bundle(cls, bundle: Array):
+    def from_coords(cls, coords: Array):
         raise NotImplementedError
 
     @abstractmethod
-    def as_bundle(self) -> Array:
+    def as_coords(self) -> Array:
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
+    def concatenate(cls, vectors: Sequence):
+        raise NotImplementedError
+
+    def __len__(self) -> int:
+        if self.single:
+            raise TypeError("Single vector has no len().")
+        return self.value.shape[0]
+
+    @abstractmethod
+    def __getitem__(self, indexer):
+        raise NotImplementedError
+
+    @abstractmethod
+    def __iter__(self):
+        raise NotImplementedError
+
+
+class AbstractCotangentVector(eqx.Module, Generic[_GroupElement]):
+    point: AbstractVar[_GroupElement]
+    value: AbstractVar[Array]
+    nparams: AbstractVar[int]
+    ncoords: AbstractVar[int]
+
+    @property
+    def shape(self):
+        return self.value.shape
+
+    @property
+    def single(self) -> bool:
+        return self.value.ndim == 1
+
+    @classmethod
+    @abstractmethod
+    def from_vector(cls, vec: Array, point: Optional[_GroupElement] = None):
+        raise NotImplementedError
+
+    @abstractmethod
+    def as_vector(self) -> Array:
+        raise NotImplementedError
+
+    @abstractmethod
+    def pair(self, tangent) -> RealScalarLike:
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
+    def from_coords(cls, coords: Array):
+        raise NotImplementedError
+
+    @abstractmethod
+    def as_coords(self) -> Array:
         raise NotImplementedError
 
     @classmethod

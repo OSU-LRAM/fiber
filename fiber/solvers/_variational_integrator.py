@@ -18,43 +18,45 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from typing import Callable, ClassVar, Generic, TypeAlias, cast
+from typing import Callable, ClassVar, Generic, TypeAlias, TypeVar, cast
 
+import jax.tree_util as jtu
 import optimistix as optx
 from diffrax import (
     RESULTS,
     AbstractImplicitSolver,
     AbstractStratonovichSolver,
-    AbstractTerm,
     MultiTerm,
 )
-from diffrax._heuristics import is_sde
 from diffrax._term import WrapTerm
 from jaxtyping import Array
 from optimistix import AbstractRootFinder
 
 from .._custom_types import Args, BoolScalarLike, DenseInfo, RealScalarLike
+from .._groups._element import AbstractCotangentVector, AbstractTangentVector
 from .._local_interpolation import LocalLeftBundleInterpolation as LocalInterpolation
-from ._vector_field import _Covector, _Vector
+from ._term import ImplicitVariationalTerm, VariationalDiffusionTerm
+
+_V = TypeVar("_V", bound=AbstractTangentVector)
+_CV = TypeVar("_CV", bound=AbstractCotangentVector)
 
 _ErrorEstimate: TypeAlias = None
 _SolverState: TypeAlias = None
+_Terms: TypeAlias = MultiTerm[tuple[ImplicitVariationalTerm, VariationalDiffusionTerm]]
 
 
 def _implicit_relation(v: Array, solver_args: Args) -> Array:
-    implicit_step, y_prime, t1, vector_cls, integrator_args = solver_args
+    implicit_step, y_prime, t1, vector_cls, integrator_args, dt = solver_args
     y = vector_cls.from_vector(v, point=y_prime.point)
-    diff = implicit_step(t1, y, integrator_args) - y_prime
+    diff = implicit_step(t1, y, integrator_args, dt) - y_prime
     return diff.value
 
 
-class VariationalIntegrator(
-    AbstractImplicitSolver, AbstractStratonovichSolver, Generic[_Vector, _Covector]
-):
-    term_structure: ClassVar = MultiTerm
+class LieSVI(AbstractImplicitSolver, AbstractStratonovichSolver, Generic[_V, _CV]):
+    term_structure: ClassVar = _Terms
     interpolation_cls: ClassVar[Callable[..., LocalInterpolation]] = LocalInterpolation
-    root_finder: AbstractRootFinder = optx.Chord(rtol=1e-2, atol=1e-2)  # type: ignore
-    root_find_max_steps: int = 100  # type: ignore
+    root_finder: AbstractRootFinder = optx.Chord(rtol=1e-3, atol=1e-4)  # type: ignore
+    root_find_max_steps: int = 10  # type: ignore
 
     def order(self, terms):
         del terms
@@ -66,10 +68,10 @@ class VariationalIntegrator(
 
     def init(
         self,
-        terms: MultiTerm,
+        terms: _Terms,
         t0: RealScalarLike,
         t1: RealScalarLike,
-        y0: _Vector,
+        y0: _V,
         args: Args,
     ) -> _SolverState:
         del terms, t0, t1, y0, args
@@ -77,35 +79,27 @@ class VariationalIntegrator(
 
     def step(
         self,
-        terms: AbstractTerm,
+        terms: _Terms,
         t0: RealScalarLike,
         t1: RealScalarLike,
-        y0: _Vector,
+        y0: _V,
         args: Args,
         solver_state: _SolverState,
         made_jump: BoolScalarLike,
-    ) -> tuple[_Vector, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
-        if is_sde(terms):
-            terms = cast(MultiTerm, terms)
+    ) -> tuple[_V, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
+        drift, diffusion = jtu.tree_map(lambda t: cast(WrapTerm, t), terms.terms)
 
-            drift, diffusion = terms.terms
-            dt = drift.contr(t0, t1)
-            dw = diffusion.contr(t0, t1)
+        dt = drift.contr(t0, t1)
+        dw = diffusion.contr(t0, t1)
 
-            f0 = drift.vf_prod(t0, y0, args, dt)
-            h0 = diffusion.vf_prod(t0, y0, args, dw)
-            y_prime = f0 + h0
+        f0 = drift.vf_prod(t0, y0, args, dt)
+        h0 = diffusion.vf_prod(t0, y0, args, dw)
+        k0 = f0 + h0
 
-            t = t1 * drift.direction
-            implicit_step = drift.term.implicit_step
-        else:
-            terms = cast(WrapTerm, terms)
-            y_prime = terms.vf_prod(t0, y0, args, terms.contr(t0, t1))
+        t = t1 * drift.direction
+        implicit_step = drift.term.relation
 
-            t = t1 * terms.direction
-            implicit_step = terms.term.implicit_step  # type: ignore
-
-        solver_args = (implicit_step, y_prime, t, type(y0), args)
+        solver_args = (implicit_step, k0, t, type(y0), args, dt)
         nonlinear_sol = optx.root_find(
             _implicit_relation,
             self.root_finder,
@@ -114,8 +108,9 @@ class VariationalIntegrator(
             throw=False,
             max_steps=self.root_find_max_steps,
         )
+        k1 = nonlinear_sol.value
 
-        y1 = type(y0).from_vector(nonlinear_sol.value, point=y_prime.point)
+        y1 = type(y0).from_vector(k1, point=k0.point)
         dense_info = dict(y0=y0, y1=y1)
         solver_state = None
         result = RESULTS.promote(nonlinear_sol.result)
@@ -124,9 +119,9 @@ class VariationalIntegrator(
 
     def func(
         self,
-        terms: MultiTerm,
+        terms: _Terms,
         t0: RealScalarLike,
-        y0: _Vector,
+        y0: _V,
         args: Args,
-    ) -> _Covector:
+    ) -> _CV:
         raise NotImplementedError

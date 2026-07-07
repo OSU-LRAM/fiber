@@ -18,28 +18,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from typing import Any, Callable, ClassVar, Generic, TypeAlias, TypeVar
+from typing import Callable, ClassVar, Generic, TypeAlias
 
 import equinox as eqx
 from diffrax import RESULTS, AbstractStratonovichSolver, AbstractTerm, MultiTerm
 from jaxtyping import Array
 
 from .._custom_types import VF, Args, BoolScalarLike, DenseInfo, RealScalarLike
-from .._groups._element import AbstractTangentVector
 from .._local_interpolation import LocalLeftBundleInterpolation as LocalInterpolation
 from .._operations import rplus
+from ._term import _CV, _V, SharpTerm
 
 _ErrorEstimate: TypeAlias = None
 _SolverState: TypeAlias = None
-_StochasticTerms: TypeAlias = MultiTerm[
-    tuple[AbstractTerm[Any, RealScalarLike], AbstractTerm]
-]
-
-_TangentVector = TypeVar("_TangentVector", bound=AbstractTangentVector)
+_Terms: TypeAlias = MultiTerm[tuple[SharpTerm, AbstractTerm]]
 
 
-class EulerHeun(AbstractStratonovichSolver, Generic[_TangentVector]):
-    term_structure: ClassVar = _StochasticTerms
+class EulerHeun(AbstractStratonovichSolver, Generic[_V, _CV]):
+    term_structure: ClassVar = _Terms
     interpolation_cls: ClassVar[Callable[..., LocalInterpolation]] = LocalInterpolation
 
     def order(self, terms):
@@ -52,36 +48,25 @@ class EulerHeun(AbstractStratonovichSolver, Generic[_TangentVector]):
 
     def init(
         self,
-        terms: _StochasticTerms,
+        terms: _Terms,
         t0: RealScalarLike,
         t1: RealScalarLike,
-        y0: _TangentVector,
+        y0: _V,
         args: Args,
     ) -> _SolverState:
-        del t0, t1, y0, args
-        drift, diffusion = terms.terms
-        try:
-            cometric = getattr(drift.term.vector_field, "cometric")  # type: ignore
-            assert callable(cometric)
-        except Exception:
-            raise ValueError(
-                "Expected the drift term to implement the `cometric` function. The "
-                "`EulerHeun` solver is designed for hypoelliptic diffusion processes "
-                "with noise entering the system as a covector (which must be mapped "
-                "back to the tangent space using the cometric)."
-            )
+        del terms, t0, t1, y0, args
         return None
 
     def step(
         self,
-        terms: _StochasticTerms,
+        terms: _Terms,
         t0: RealScalarLike,
         t1: RealScalarLike,
-        y0: _TangentVector,
+        y0: _V,
         args: Args,
         solver_state: _SolverState,
         made_jump: BoolScalarLike,
-    ) -> tuple[_TangentVector, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
+    ) -> tuple[_V, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
         del solver_state, made_jump
 
         drift, diffusion = terms.terms
@@ -89,12 +74,12 @@ class EulerHeun(AbstractStratonovichSolver, Generic[_TangentVector]):
         dw = diffusion.contr(t0, t1)
 
         f0 = drift.vf_prod(t0, y0, args, dt)
-        h0 = diffusion.vf_prod(t0, y0, args, dw)
-        h0 = drift.term.vector_field.cometric(t0, y0, h0, args)  # type: ignore
+        h0 = diffusion.prod(diffusion.vf(t0, y0, args), dw)
+        h0 = drift.term.cometric(y0, h0)  # type: ignore
 
         y_prime = y0 + h0
         h_prime = diffusion.vf_prod(t0, y_prime, args, dw)
-        h_prime = drift.term.vector_field.cometric(t0, y_prime, h_prime, args)  # type: ignore
+        h_prime = drift.term.cometric(y_prime, h_prime)  # type: ignore
 
         vf = f0 + 0.5 * (h0 + h_prime)
         y1 = y0 + vf
@@ -105,7 +90,7 @@ class EulerHeun(AbstractStratonovichSolver, Generic[_TangentVector]):
 
     def func(
         self,
-        terms: MultiTerm[tuple[AbstractTerm, AbstractTerm]],
+        terms: _Terms,
         t0: RealScalarLike,
         y0: Array,
         args: Args,

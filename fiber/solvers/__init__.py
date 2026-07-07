@@ -20,15 +20,14 @@
 
 from ._euler import LieEuler
 from ._euler_heun import EulerHeun
-from ._term import ImplicitTerm, UnsafeControlTerm
-from ._variational_integrator import VariationalIntegrator
-from ._vector_field import AbstractImplicitVectorField
+from ._term import ImplicitVariationalTerm, SharpTerm, VariationalDiffusionTerm
+from ._variational_integrator import LieSVI
 
 __all__ = [
     "LieEuler",
     "EulerHeun",
-    "VariationalIntegrator",
-    "AbstractImplicitVectorField",
-    "ImplicitTerm",
-    "UnsafeControlTerm",
+    "LieSVI",
+    "ImplicitVariationalTerm",
+    "VariationalDiffusionTerm",
+    "SharpTerm",
 ]

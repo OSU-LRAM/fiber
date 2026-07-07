@@ -21,6 +21,7 @@ else:
 
 # the following types come from:
 # https://github.com/patrick-kidger/diffrax/blob/main/diffrax/_custom_types.py
+Y = PyTree[Shaped[ArrayLike, "?*y"], "Y"]
 VF = PyTree[Shaped[ArrayLike, "?*vf"], "VF"]
 Control = PyTree[Shaped[ArrayLike, "?*control"], "C"]
 Args = PyTree[Any]

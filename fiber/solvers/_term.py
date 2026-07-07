@@ -18,58 +18,70 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from typing import Generic, override
+from typing import Callable, Generic, TypeVar, cast
 
-import equinox as eqx
-import jax.tree_util as jtu
 from diffrax import AbstractTerm
-from diffrax import ControlTerm as _ControlTerm
-from diffrax._misc import upcast_or_raise
 
-from .._custom_types import VF, Args, Control, RealScalarLike
-from ._vector_field import AbstractImplicitVectorField, _Covector, _Vector
+from .._custom_types import Args, Control, RealScalarLike
+from .._groups._element import AbstractCotangentVector, AbstractTangentVector
+
+_V = TypeVar("_V", bound=AbstractTangentVector)
+_CV = TypeVar("_CV", bound=AbstractCotangentVector)
+_Control = TypeVar("_Control", bound=Control)
 
 
-class ImplicitTerm(AbstractTerm, Generic[_Vector, _Covector]):
-    vector_field: AbstractImplicitVectorField[_Vector, _Covector]
+class SharpTerm(AbstractTerm[_CV, _Control], Generic[_V, _CV, _Control]):
+    vector_field: Callable[[RealScalarLike, _V, Args], _CV]
+    cometric_f: Callable[[_V, _CV], _V]
 
-    def _vf(self, fn: VF, t: RealScalarLike, y: _Vector, args: Args):
-        out = fn(t, y, args)
+    def vf(self, t: RealScalarLike, y: _V, args: Args) -> _CV:
+        return self.vector_field(t, y, args)
 
-        def _upcast(oi, yi):
-            oi = upcast_or_raise(
-                oi,
-                yi,
-                "the vector field passed to `ImplicitTerm`",
-                "the corresponding leaf of `y`",
-            )
-            return oi
+    def cometric(self, y0: _V, k1: _CV) -> _V:
+        return self.cometric_f(y0, k1)
 
-        point = jtu.tree_map(_upcast, out.point, y.point)
-        value = _upcast(out.value, y.value)
+    def contr(self, t0: RealScalarLike, t1: RealScalarLike, **kwargs) -> _Control:
+        return cast(_Control, t1 - t0)
 
-        return eqx.tree_at(lambda w: (w.point, w.value), out, (point, value))
+    def prod(self, vf: _CV, control: RealScalarLike) -> _CV:
+        return vf * control  # type: ignore
 
-    def vf(self, t: RealScalarLike, y: _Vector, args: Args) -> _Covector:
-        return self._vf(self.vector_field, t, y, args)
+    def vf_prod(self, t: RealScalarLike, y: _V, args: Args, control: _Control) -> _CV:
+        return self.prod(self.vf(t, y, args), control)
 
-    def implicit_step(self, t: RealScalarLike, y: _Vector, args: Args) -> _Covector:
-        return self._vf(self.vector_field.implicit_step, t, y, args)
 
-    def contr(self, t0: RealScalarLike, t1: RealScalarLike, **kwargs):
-        return t1 - t0
+class ImplicitVariationalTerm(AbstractTerm[_CV, _Control], Generic[_V, _CV, _Control]):
+    vector_field: Callable[[RealScalarLike, _V, Args, _Control], _CV]
+    implicit_f: Callable[[RealScalarLike, _V, Args, _Control], _CV]
 
-    def prod(self, vf: VF, control: Control):
+    def vf(self, t: RealScalarLike, y: _V, args: Args, control: _Control = 0.0) -> _CV:
+        return self.vector_field(t, y, args, control)
+
+    def relation(self, t: RealScalarLike, y: _V, args: Args, control: _Control) -> _CV:
+        return self.implicit_f(t, y, args, control)
+
+    def contr(self, t0: RealScalarLike, t1: RealScalarLike, **kwargs) -> _Control:
+        return cast(_Control, t1 - t0)
+
+    def prod(self, vf: _CV, control: RealScalarLike) -> _V:
         raise NotImplementedError
 
-    def vf_prod(
-        self, t: RealScalarLike, y: _Vector, args: Args, control: Control
-    ) -> _Covector:
-        return self.vf(t, y, args)
+    def vf_prod(self, t: RealScalarLike, y: _V, args: Args, control: _Control) -> _CV:
+        return self.vf(t, y, args, control)
 
 
-class UnsafeControlTerm(_ControlTerm, Generic[_Vector]):
-    @override
-    def vf_prod(self, t: RealScalarLike, y: _Vector, args: Args, control):
-        vf = self.vf(t, y, args)
-        return self.prod(vf, control)
+class VariationalDiffusionTerm(AbstractTerm[_CV, _Control], Generic[_V, _CV, _Control]):
+    vector_field: Callable[[RealScalarLike, _V, Args, _Control], _CV]
+    control: _Control
+
+    def vf(self, t: RealScalarLike, y: _V, args: Args, control: _Control = 0.0) -> _CV:
+        return self.vector_field(t, y, args, control)
+
+    def contr(self, t0: RealScalarLike, t1: RealScalarLike, **kwargs) -> _Control:
+        return self.control.evaluate(t0, t1, **kwargs)
+
+    def prod(self, vf: _CV, control: RealScalarLike) -> _V:
+        raise NotImplementedError
+
+    def vf_prod(self, t: RealScalarLike, y: _V, args: Args, control: _Control) -> _CV:
+        return self.vf(t, y, args, control)

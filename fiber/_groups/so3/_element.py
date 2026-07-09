@@ -57,8 +57,8 @@ class Rotation3d(AbstractGroupElement):
     def from_quat(cls, quat: ArrayLike):
         return cls(R.from_quat(jnp.asarray(quat)).as_matrix())
 
-    def as_quat(self) -> Array:
-        return R.from_matrix(self.value).as_quat()
+    def as_quat(self, canonical: bool = False, scalar_first: bool = False) -> Array:
+        return R.from_matrix(self.value).as_quat(canonical, scalar_first)
 
     @classmethod
     def from_euler(
@@ -230,9 +230,7 @@ class Moment3d(AbstractCotangentVector[Rotation3d]):
 
     def __check_init__(self):
         if not isinstance(self.point, Rotation3d):
-            raise ValueError(
-                "The cotangent vector point must be a Rotation3d instance"
-            )
+            raise ValueError("The cotangent vector point must be a Rotation3d instance")
 
         if self.point.shape[:-2] != self.value.shape[:-1]:
             raise ValueError(

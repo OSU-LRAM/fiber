@@ -1,7 +1,7 @@
 [project]
 name = "fiber"
 version = "0.1.0"
-description = "A JAX library for SE(3) operations."
+description = "A JAX library for Lie group operations."
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
@@ -13,6 +13,3 @@ dependencies = [
 
 [tool.ruff.lint]
 ignore = ["F722", "F821", "E731", "F811"]
-
-# [tool.basedpyright]
-# ignore = ["reportRedeclaration"]

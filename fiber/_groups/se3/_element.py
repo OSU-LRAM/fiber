@@ -82,6 +82,16 @@ class Isometry3d(AbstractGroupElement):
         return vec_fn(self.value)
 
     @classmethod
+    def from_pq(cls, vec: ArrayLike):
+        vec_fn = jnp.vectorize(_from_pq, signature="(n)->(m,m)")
+        return cls(vec_fn(jnp.asarray(vec)))
+
+    def as_pq(self, canonical: bool = False, scalar_first: bool = False) -> Array:
+        fn = functools.partial(_as_pq, canonical=canonical, scalar_first=scalar_first)
+        vec_fn = jnp.vectorize(fn, signature="(n,n)->(m)")
+        return vec_fn(self.value)
+
+    @classmethod
     def eye(cls):
         return cls(jnp.eye(4))
 
@@ -343,6 +353,18 @@ def _as_euclidean(mat: Array, seq: str, degrees: bool) -> Array:
     pos = mat[:3, 3]
     angles = R.from_matrix(mat[:3, :3]).as_euler(seq, degrees)
     return jnp.concatenate([pos, cast(Array, angles)], axis=-1)
+
+
+def _from_pq(vec: Array) -> Array:
+    pos, quat = jnp.split(vec, (3,))
+    rot = R.from_quat(quat).as_matrix()
+    return jnp.block([[rot, pos.reshape(3, 1)], [jnp.zeros(3), 1]])
+
+
+def _as_pq(mat: Array, canonical: bool, scalar_first: bool) -> Array:
+    pos = mat[:3, 3]
+    quat = R.from_matrix(mat[:3, :3]).as_quat(canonical, scalar_first)
+    return jnp.concatenate([pos, cast(Array, quat)], axis=-1)
 
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m)")

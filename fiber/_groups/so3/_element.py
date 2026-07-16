@@ -40,7 +40,7 @@ from .._element import (
 
 class Rotation3d(AbstractGroupElement):
     value: Array = eqx.field(converter=jnp.asarray)
-    nparams: int = eqx.field(static=True, default=9)
+    nq: int = eqx.field(static=True, default=9)
 
     @property
     def angle(self) -> float:
@@ -74,11 +74,11 @@ class Rotation3d(AbstractGroupElement):
         return cast(Array, euler)
 
     @classmethod
-    def unflatten(cls, params: Array):
-        return cls(_unflatten(params))
+    def unravel(cls, params: Array):
+        return cls(_unravel_element(params))
 
-    def flatten(self) -> Array:
-        return _flatten(self.value)
+    def ravel(self) -> Array:
+        return _ravel_element(self.value)
 
     @classmethod
     def eye(cls):
@@ -115,8 +115,8 @@ class Rotation3d(AbstractGroupElement):
 class Spin3d(AbstractTangentVector[Rotation3d]):
     point: Rotation3d
     value: Array = eqx.field(converter=jnp.asarray)
-    nparams: int = eqx.field(static=True, default=3)
-    ncoords: int = eqx.field(static=True, default=12)
+    nv: int = eqx.field(static=True, default=3)
+    nx: int = eqx.field(static=True, default=12)
 
     def __check_init__(self):
         if not isinstance(self.point, Rotation3d):
@@ -129,10 +129,10 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
             )
 
     @classmethod
-    def from_matrix(cls, mat: Array, point: Optional[Rotation3d] = None):
-        vec = jnp.asarray(mat)
+    def from_matrix(cls, mat: ArrayLike, point: Optional[Rotation3d] = None):
+        mat = jnp.asarray(mat)
         if point is None:
-            shape = vec.shape[:-2]
+            shape = mat.shape[:-2]
             point = Rotation3d(jnp.broadcast_to(jnp.eye(3), (*shape, 3, 3)))
         return cls(point, mat)
 
@@ -145,18 +145,29 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
         if point is None:
             shape = vec.shape[:-1]
             point = Rotation3d(jnp.broadcast_to(jnp.eye(3), (*shape, 3, 3)))
-        return cls(point, skew3(jnp.asarray(vec)))
+        return cls(point, skew3(vec))
 
     def as_vector(self) -> Array:
         return vex3(self.value)
 
     @classmethod
-    def from_coords(cls, coords: Array):
+    def from_coords(cls, coords: ArrayLike):
         point, vector = _from_coords_vector(coords)
         return cls(Rotation3d(point), vector)
 
     def as_coords(self) -> Array:
         return _as_coords_vector(self.value, self.point.value)
+
+    @classmethod
+    def unravel(cls, params: ArrayLike, point: Optional[Rotation3d] = None):
+        params = jnp.asarray(params)
+        if point is None:
+            shape = params.shape[:-1]
+            point = Rotation3d(jnp.broadcast_to(jnp.eye(3), (*shape, 3, 3)))
+        return cls(point, _unravel_vector(params))
+
+    def ravel(self) -> Array:
+        return _ravel_vector(self.value)
 
     @classmethod
     def concatenate(cls, vectors: Sequence[Spin3d]):
@@ -225,8 +236,8 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
 class Moment3d(AbstractCotangentVector[Rotation3d]):
     point: Rotation3d
     value: Array = eqx.field(converter=jnp.asarray)
-    nparams: int = eqx.field(static=True, default=3)
-    ncoords: int = eqx.field(static=True, default=12)
+    nf: int = eqx.field(static=True, default=3)
+    nx: int = eqx.field(static=True, default=12)
 
     def __check_init__(self):
         if not isinstance(self.point, Rotation3d):
@@ -251,7 +262,7 @@ class Moment3d(AbstractCotangentVector[Rotation3d]):
         return self.value
 
     @classmethod
-    def from_coords(cls, coords: Array):
+    def from_coords(cls, coords: ArrayLike):
         point, vector = _from_coords_covector(coords)
         return cls(Rotation3d(point), vector)
 
@@ -344,32 +355,42 @@ def _rotation_angle(mat: Array) -> RealScalarLike:
 
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m)")
-def _unflatten(params: Array) -> Array:
+def _unravel_element(params: Array) -> Array:
     return params.reshape((3, 3))
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m)")
-def _flatten(matrix: Array) -> Array:
+def _ravel_element(matrix: Array) -> Array:
+    return matrix.flatten()
+
+
+@functools.partial(jnp.vectorize, signature="(n)->(m,m)")
+def _unravel_vector(params: Array) -> Array:
+    return params.reshape((3, 3))
+
+
+@functools.partial(jnp.vectorize, signature="(n,n)->(m)")
+def _ravel_vector(matrix: Array) -> Array:
     return matrix.flatten()
 
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m),(m,m)")
 def _from_coords_vector(coords: Array) -> tuple[Array, Array]:
-    point, vector = jnp.split(coords, (Rotation3d.nparams,))
-    return _unflatten(point), skew3(vector)
+    point, vector = jnp.split(coords, (Rotation3d.nq,))
+    return _unravel_element(point), skew3(vector)
 
 
 @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(m)")
 def _as_coords_vector(vector: Array, point: Array) -> Array:
-    return jnp.concatenate([_flatten(point), vex3(vector)], axis=0)
+    return jnp.concatenate([_ravel_element(point), vex3(vector)], axis=0)
 
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m),(q)")
 def _from_coords_covector(coords: Array) -> tuple[Array, Array]:
-    point, vector = jnp.split(coords, (Rotation3d.nparams,))
-    return _unflatten(point), vector
+    point, vector = jnp.split(coords, (Rotation3d.nq,))
+    return _unravel_element(point), vector
 
 
 @functools.partial(jnp.vectorize, signature="(n),(m,m)->(q)")
 def _as_coords_covector(vector: Array, point: Array) -> Array:
-    return jnp.concatenate([_flatten(point), vector], axis=0)
+    return jnp.concatenate([_ravel_element(point), vector], axis=0)

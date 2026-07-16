@@ -72,7 +72,7 @@ class LieEuler(AbstractItoSolver, Generic[_TangentVector]):
 
         vf = terms.vf_prod(t0, y0, args, terms.contr(t0, t1))
         y1 = y0 + vf
-        y1 = eqx.tree_at(lambda w: w.point.value, y1, rplus(y0.point, vf.point).value)
+        y1 = eqx.tree_at(lambda w: w.point.value, y1, rplus(y0.point, vf).value)
 
         dense_info = dict(y0=y0, y1=y1)
         return y1, None, dense_info, None, RESULTS.successful

@@ -83,7 +83,7 @@ class EulerHeun(AbstractStratonovichSolver, Generic[_V, _CV]):
 
         vf = f0 + 0.5 * (h0 + h_prime)
         y1 = y0 + vf
-        y1 = eqx.tree_at(lambda w: w.point.value, y1, rplus(y0.point, vf.point).value)
+        y1 = eqx.tree_at(lambda w: w.point.value, y1, rplus(y0.point, f0).value)
 
         dense_info = dict(y0=y0, y1=y1)
         return y1, None, dense_info, None, RESULTS.successful

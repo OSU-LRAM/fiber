@@ -41,7 +41,7 @@ from .._element import (
 
 class Rotation2d(AbstractGroupElement):
     value: Array = eqx.field(converter=jnp.asarray)
-    nparams: int = eqx.field(static=True, default=4)
+    nq: int = eqx.field(static=True, default=4)
 
     @property
     def angle(self) -> Array:
@@ -62,11 +62,11 @@ class Rotation2d(AbstractGroupElement):
         return self.angle
 
     @classmethod
-    def unflatten(cls, params: Array):
-        return cls(_unflatten(params))
+    def unravel(cls, params: Array):
+        return cls(_unravel_element(params))
 
-    def flatten(self) -> Array:
-        return _flatten(self.value)
+    def ravel(self) -> Array:
+        return _ravel_element(self.value)
 
     @classmethod
     def eye(cls):
@@ -103,8 +103,8 @@ class Rotation2d(AbstractGroupElement):
 class Spin2d(AbstractTangentVector[Rotation2d]):
     point: Rotation2d
     value: Array = eqx.field(converter=jnp.asarray)
-    nparams: int = eqx.field(static=True, default=1)
-    ncoords: int = eqx.field(static=True, default=5)
+    nv: int = eqx.field(static=True, default=1)
+    nx: int = eqx.field(static=True, default=5)
 
     def __check_init__(self):
         if not isinstance(self.point, Rotation2d):
@@ -117,10 +117,10 @@ class Spin2d(AbstractTangentVector[Rotation2d]):
             )
 
     @classmethod
-    def from_matrix(cls, mat: Array, point: Optional[Rotation2d] = None):
-        vec = jnp.asarray(mat)
+    def from_matrix(cls, mat: ArrayLike, point: Optional[Rotation2d] = None):
+        mat = jnp.asarray(mat)
         if point is None:
-            shape = vec.shape[:-2]
+            shape = mat.shape[:-2]
             point = Rotation2d(jnp.broadcast_to(jnp.eye(2), (*shape, 2, 2)))
         return cls(point, mat)
 
@@ -139,12 +139,23 @@ class Spin2d(AbstractTangentVector[Rotation2d]):
         return vex2(self.value)
 
     @classmethod
-    def from_coords(cls, coords: Array):
+    def from_coords(cls, coords: ArrayLike):
         point, vector = _from_coords_vector(coords)
         return cls(Rotation2d(point), vector)
 
     def as_coords(self) -> Array:
         return _as_coords_vector(self.value, self.point.value)
+
+    @classmethod
+    def unravel(cls, params: ArrayLike, point: Optional[Rotation2d] = None):
+        params = jnp.asarray(params)
+        if point is None:
+            shape = params.shape[:-1]
+            point = Rotation2d(jnp.broadcast_to(jnp.eye(2), (*shape, 2, 2)))
+        return cls(point, _unravel_vector(params))
+
+    def ravel(self) -> Array:
+        return _ravel_vector(self.value)
 
     @classmethod
     def concatenate(cls, vectors: Sequence[Spin2d]):
@@ -213,8 +224,8 @@ class Spin2d(AbstractTangentVector[Rotation2d]):
 class Moment2d(AbstractCotangentVector[Rotation2d]):
     point: Rotation2d
     value: Array = eqx.field(converter=jnp.asarray)
-    nparams: int = eqx.field(static=True, default=1)
-    ncoords: int = eqx.field(static=True, default=5)
+    nf: int = eqx.field(static=True, default=1)
+    nx: int = eqx.field(static=True, default=5)
 
     @property
     def single(self) -> bool:
@@ -224,9 +235,7 @@ class Moment2d(AbstractCotangentVector[Rotation2d]):
 
     def __check_init__(self):
         if not isinstance(self.point, Rotation2d):
-            raise ValueError(
-                "The cotangent vector point must be a Rotation2d instance"
-            )
+            raise ValueError("The cotangent vector point must be a Rotation2d instance")
 
         if self.point.shape[:-2] != self.value.shape:
             raise ValueError(
@@ -247,7 +256,7 @@ class Moment2d(AbstractCotangentVector[Rotation2d]):
         return self.value
 
     @classmethod
-    def from_coords(cls, coords: Array):
+    def from_coords(cls, coords: ArrayLike):
         point, vector = _from_coords_covector(coords)
         return cls(Rotation2d(point), vector)
 
@@ -343,32 +352,44 @@ def _rotation_angle(mat: Array) -> RealScalarLike:
 
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m)")
-def _unflatten(params: Array) -> Array:
+def _unravel_element(params: Array) -> Array:
     return params.reshape((2, 2))
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m)")
-def _flatten(matrix: Array) -> Array:
+def _ravel_element(matrix: Array) -> Array:
+    return matrix.flatten()
+
+
+@functools.partial(jnp.vectorize, signature="(n)->(m,m)")
+def _unravel_vector(params: Array) -> Array:
+    return params.reshape((2, 2))
+
+
+@functools.partial(jnp.vectorize, signature="(n,n)->(m)")
+def _ravel_vector(matrix: Array) -> Array:
     return matrix.flatten()
 
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m),(m,m)")
 def _from_coords_vector(coords: Array) -> tuple[Array, Array]:
-    point, vector = jnp.split(coords, (Rotation2d.nparams,))
-    return _unflatten(point), skew2(vector)
+    point, vector = jnp.split(coords, (Rotation2d.nq,))
+    return _unravel_element(point), skew2(vector)
 
 
 @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(m)")
 def _as_coords_vector(vector: Array, point: Array) -> Array:
-    return jnp.concatenate([_flatten(point), jnp.reshape(vex2(vector), (1,))], axis=0)
+    return jnp.concatenate(
+        [_ravel_element(point), jnp.reshape(vex2(vector), (1,))], axis=0
+    )
 
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m),()")
 def _from_coords_covector(coords: Array) -> tuple[Array, RealScalarLike]:
-    point, vector = jnp.split(coords, (Rotation2d.nparams,))
-    return _unflatten(point), vector[0]
+    point, vector = jnp.split(coords, (Rotation2d.nq,))
+    return _unravel_element(point), vector[0]
 
 
 @functools.partial(jnp.vectorize, signature="(),(n,n)->(m)")
 def _as_coords_covector(vector: RealScalarLike, point: Array) -> Array:
-    return jnp.concatenate([_flatten(point), jnp.reshape(vector, (1,))], axis=0)
+    return jnp.concatenate([_ravel_element(point), jnp.reshape(vector, (1,))], axis=0)

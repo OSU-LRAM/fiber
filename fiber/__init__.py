@@ -40,6 +40,7 @@ from ._operations import (
     Adj_op,
     adj,
     adj_op,
+    concatenate,
     dAdj,
     dadj,
     dAdj_inv,
@@ -55,8 +56,10 @@ from ._operations import (
     lminus,
     logm,
     lplus,
+    pair,
     rminus,
     rplus,
+    shape,
 )
 
 __all__ = [
@@ -80,6 +83,7 @@ __all__ = [
     "Adj_op",
     "adj",
     "adj_op",
+    "concatenate",
     "dAdj",
     "dadj",
     "dAdj_inv",
@@ -95,8 +99,10 @@ __all__ = [
     "lminus",
     "logm",
     "lplus",
+    "pair",
     "rminus",
     "rplus",
+    "shape",
     "LocalGeodesicInterpolation",
     "LocalLeftBundleInterpolation",
     "GeodesicInterpolation",

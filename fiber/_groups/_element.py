@@ -31,7 +31,7 @@ from .._custom_types import ArrayLike, RealScalarLike
 
 class AbstractGroupElement(eqx.Module):
     value: AbstractVar[Array]
-    nparams: AbstractVar[int]
+    nq: AbstractVar[int]
 
     @property
     def shape(self):
@@ -39,9 +39,6 @@ class AbstractGroupElement(eqx.Module):
 
     @property
     def single(self) -> bool:
-        # `value` is a matrix (n, n); a single element has no batch axis on
-        # top of those two, matching jax.scipy.spatial.transform.Rotation's
-        # convention of comparing ndim to the core representation's rank.
         return self.value.ndim == 2
 
     @classmethod
@@ -55,11 +52,11 @@ class AbstractGroupElement(eqx.Module):
 
     @classmethod
     @abstractmethod
-    def unflatten(cls, params: Array):
+    def unravel(cls, params: Array):
         raise NotImplementedError
 
     @abstractmethod
-    def flatten(self) -> Array:
+    def ravel(self) -> Array:
         raise NotImplementedError
 
     @classmethod
@@ -92,8 +89,8 @@ _GroupElement = TypeVar("_GroupElement", bound=AbstractGroupElement)
 class AbstractTangentVector(eqx.Module, Generic[_GroupElement]):
     point: AbstractVar[_GroupElement]
     value: AbstractVar[Array]
-    nparams: AbstractVar[int]
-    ncoords: AbstractVar[int]
+    nv: AbstractVar[int]
+    nx: AbstractVar[int]
 
     @property
     def shape(self):
@@ -101,13 +98,11 @@ class AbstractTangentVector(eqx.Module, Generic[_GroupElement]):
 
     @property
     def single(self) -> bool:
-        # `value` holds the matrix Lie-algebra representation (n, n); see
-        # `AbstractGroupElement.single` for why this compares to ndim 2.
         return self.value.ndim == 2
 
     @classmethod
     @abstractmethod
-    def from_matrix(cls, mat: Array, point: Optional[_GroupElement] = None):
+    def from_matrix(cls, mat: ArrayLike, point: Optional[_GroupElement] = None):
         raise NotImplementedError
 
     @abstractmethod
@@ -116,7 +111,7 @@ class AbstractTangentVector(eqx.Module, Generic[_GroupElement]):
 
     @classmethod
     @abstractmethod
-    def from_vector(cls, vec: Array, point: Optional[_GroupElement] = None):
+    def from_vector(cls, vec: ArrayLike, point: Optional[_GroupElement] = None):
         raise NotImplementedError
 
     @abstractmethod
@@ -125,11 +120,20 @@ class AbstractTangentVector(eqx.Module, Generic[_GroupElement]):
 
     @classmethod
     @abstractmethod
-    def from_coords(cls, coords: Array):
+    def from_coords(cls, coords: ArrayLike):
         raise NotImplementedError
 
     @abstractmethod
     def as_coords(self) -> Array:
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
+    def unravel(cls, params: ArrayLike, point: Optional[_GroupElement] = None):
+        raise NotImplementedError
+
+    @abstractmethod
+    def ravel(self) -> Array:
         raise NotImplementedError
 
     @classmethod
@@ -154,8 +158,8 @@ class AbstractTangentVector(eqx.Module, Generic[_GroupElement]):
 class AbstractCotangentVector(eqx.Module, Generic[_GroupElement]):
     point: AbstractVar[_GroupElement]
     value: AbstractVar[Array]
-    nparams: AbstractVar[int]
-    ncoords: AbstractVar[int]
+    nf: AbstractVar[int]
+    nx: AbstractVar[int]
 
     @property
     def shape(self):
@@ -167,7 +171,7 @@ class AbstractCotangentVector(eqx.Module, Generic[_GroupElement]):
 
     @classmethod
     @abstractmethod
-    def from_vector(cls, vec: Array, point: Optional[_GroupElement] = None):
+    def from_vector(cls, vec: ArrayLike, point: Optional[_GroupElement] = None):
         raise NotImplementedError
 
     @abstractmethod
@@ -180,7 +184,7 @@ class AbstractCotangentVector(eqx.Module, Generic[_GroupElement]):
 
     @classmethod
     @abstractmethod
-    def from_coords(cls, coords: Array):
+    def from_coords(cls, coords: ArrayLike):
         raise NotImplementedError
 
     @abstractmethod

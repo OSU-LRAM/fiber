@@ -41,7 +41,7 @@ from ..so3._element import Rotation3d, _normalize_rotation
 
 class Isometry3d(AbstractGroupElement):
     value: Array = eqx.field(converter=jnp.asarray)
-    nparams: int = eqx.field(static=True, default=12)
+    nq: int = eqx.field(static=True, default=12)
 
     @property
     def position(self) -> Array:
@@ -59,11 +59,11 @@ class Isometry3d(AbstractGroupElement):
         return self.value
 
     @classmethod
-    def unflatten(cls, params: Array):
-        return cls(_unflatten(params))
+    def unravel(cls, params: Array):
+        return cls(_unravel_element(params))
 
-    def flatten(self) -> Array:
-        return _flatten(self.value)
+    def ravel(self) -> Array:
+        return _ravel_element(self.value)
 
     @classmethod
     def from_euclidean(
@@ -126,8 +126,8 @@ class Isometry3d(AbstractGroupElement):
 class Twist3d(AbstractTangentVector[Isometry3d]):
     point: Isometry3d
     value: Array = eqx.field(converter=jnp.asarray)
-    nparams: int = eqx.field(static=True, default=6)
-    ncoords: int = eqx.field(static=True, default=18)
+    nv: int = eqx.field(static=True, default=6)
+    nx: int = eqx.field(static=True, default=18)
 
     def __check_init__(self):
         if not isinstance(self.point, Isometry3d):
@@ -142,7 +142,8 @@ class Twist3d(AbstractTangentVector[Isometry3d]):
             )
 
     @classmethod
-    def from_matrix(cls, mat: Array, point: Optional[Isometry3d] = None):
+    def from_matrix(cls, mat: ArrayLike, point: Optional[Isometry3d] = None):
+        mat = jnp.asarray(mat)
         if point is None:
             shape = mat.shape[:-2]
             point = Isometry3d(jnp.broadcast_to(jnp.eye(4), (*shape, 4, 4)))
@@ -157,18 +158,29 @@ class Twist3d(AbstractTangentVector[Isometry3d]):
         if point is None:
             shape = vec.shape[:-1]
             point = Isometry3d(jnp.broadcast_to(jnp.eye(4), (*shape, 4, 4)))
-        return cls(point, _from_vector(jnp.asarray(vec)))
+        return cls(point, _from_vector(vec))
 
     def as_vector(self) -> Array:
         return _as_vector(self.value)
 
     @classmethod
-    def from_coords(cls, coords: Array):
+    def from_coords(cls, coords: ArrayLike):
         point, vector = _from_coords_vector(coords)
         return cls(Isometry3d(point), vector)
 
     def as_coords(self) -> Array:
         return _as_coords_vector(self.value, self.point.value)
+
+    @classmethod
+    def unravel(cls, params: ArrayLike, point: Optional[Isometry3d] = None):
+        params = jnp.asarray(params)
+        if point is None:
+            shape = params.shape[:-1]
+            point = Isometry3d(jnp.broadcast_to(jnp.eye(4), (*shape, 4, 4)))
+        return cls(point, _unravel_vector(params))
+
+    def ravel(self) -> Array:
+        return _ravel_vector(self.value)
 
     @classmethod
     def concatenate(cls, vectors: Sequence[Twist3d]):
@@ -237,8 +249,8 @@ class Twist3d(AbstractTangentVector[Isometry3d]):
 class Wrench3d(AbstractCotangentVector[Isometry3d]):
     point: Isometry3d
     value: Array = eqx.field(converter=jnp.asarray)
-    nparams: int = eqx.field(static=True, default=6)
-    ncoords: int = eqx.field(static=True, default=18)
+    nf: int = eqx.field(static=True, default=6)
+    nx: int = eqx.field(static=True, default=18)
 
     def __check_init__(self):
         if not isinstance(self.point, Isometry3d):
@@ -265,7 +277,7 @@ class Wrench3d(AbstractCotangentVector[Isometry3d]):
         return self.value
 
     @classmethod
-    def from_coords(cls, coords: Array):
+    def from_coords(cls, coords: ArrayLike):
         point, vector = _from_coords_covector(coords)
         return cls(Isometry3d(point), vector)
 
@@ -380,34 +392,45 @@ def _as_vector(mat: Array) -> Array:
 
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m)")
-def _unflatten(params: Array) -> Array:
+def _unravel_vector(params: Array) -> Array:
+    lin, ang = jnp.split(params, (3,))
+    return jnp.block([[ang.reshape((3, 3)), lin.reshape(3, 1)], [jnp.zeros(4)]])
+
+
+@functools.partial(jnp.vectorize, signature="(n,n)->(m)")
+def _ravel_vector(matrix: Array) -> Array:
+    return jnp.concatenate([matrix[:3, 3], matrix[:3, :3].flatten()])
+
+
+@functools.partial(jnp.vectorize, signature="(n)->(m,m)")
+def _unravel_element(params: Array) -> Array:
     pos, rot = jnp.split(params, (3,))
     mat = jnp.block([[rot.reshape((3, 3)), pos.reshape(3, 1)], [jnp.zeros(3), 1]])
     return mat
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m)")
-def _flatten(matrix: Array) -> Array:
+def _ravel_element(matrix: Array) -> Array:
     return jnp.concatenate([matrix[:3, 3], matrix[:3, :3].flatten()])
 
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m),(m,m)")
 def _from_coords_vector(coords: Array) -> tuple[Array, Array]:
-    point, vector = jnp.split(coords, (Isometry3d.nparams,))
-    return _unflatten(point), _from_vector(vector)
+    point, vector = jnp.split(coords, (Isometry3d.nq,))
+    return _unravel_element(point), _from_vector(vector)
 
 
 @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(m)")
 def _as_coords_vector(vector: Array, point: Array) -> Array:
-    return jnp.concatenate([_flatten(point), _as_vector(vector)], axis=0)
+    return jnp.concatenate([_ravel_element(point), _as_vector(vector)], axis=0)
 
 
 @functools.partial(jnp.vectorize, signature="(n)->(m,m),(q)")
 def _from_coords_covector(coords: Array) -> tuple[Array, Array]:
-    point, vector = jnp.split(coords, (Isometry3d.nparams,))
-    return _unflatten(point), vector
+    point, vector = jnp.split(coords, (Isometry3d.nq,))
+    return _unravel_element(point), vector
 
 
 @functools.partial(jnp.vectorize, signature="(n),(m,m)->(q)")
 def _as_coords_covector(vector: Array, point: Array) -> Array:
-    return jnp.concatenate([_flatten(point), vector], axis=0)
+    return jnp.concatenate([_ravel_element(point), vector], axis=0)

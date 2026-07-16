@@ -32,13 +32,13 @@ _Control = TypeVar("_Control", bound=Control)
 
 class SharpTerm(AbstractTerm[_CV, _Control], Generic[_V, _CV, _Control]):
     vector_field: Callable[[RealScalarLike, _V, Args], _CV]
-    cometric_f: Callable[[_V, _CV], _V]
+    dual_metric_fn: Callable[[_V, _CV], _V]
 
     def vf(self, t: RealScalarLike, y: _V, args: Args) -> _CV:
         return self.vector_field(t, y, args)
 
-    def cometric(self, y0: _V, k1: _CV) -> _V:
-        return self.cometric_f(y0, k1)
+    def dual_metric(self, y0: _V, k1: _CV) -> _V:
+        return self.dual_metric_fn(y0, k1)
 
     def contr(self, t0: RealScalarLike, t1: RealScalarLike, **kwargs) -> _Control:
         return cast(_Control, t1 - t0)

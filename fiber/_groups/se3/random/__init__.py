@@ -20,4 +20,4 @@
 
 from ._gaussian import cov, gaussian, mean, normal
 
-__all__ = ["gaussian", "normal", "mean", "cov"]
+__all__ = ["cov", "gaussian", "mean", "normal"]

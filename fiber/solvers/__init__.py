@@ -24,10 +24,10 @@ from ._term import ImplicitVariationalTerm, SharpTerm, VariationalDiffusionTerm
 from ._variational_integrator import LieSVI
 
 __all__ = [
-    "LieEuler",
     "EulerHeun",
-    "LieSVI",
     "ImplicitVariationalTerm",
-    "VariationalDiffusionTerm",
+    "LieEuler",
+    "LieSVI",
     "SharpTerm",
+    "VariationalDiffusionTerm",
 ]

@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Sequence
-from typing import Optional, cast
+from typing import cast
 
 import equinox as eqx
 import jax.numpy as jnp
@@ -108,7 +108,7 @@ class Spin2d(AbstractTangentVector[Rotation2d]):
 
     def __check_init__(self):
         if not isinstance(self.point, Rotation2d):
-            raise ValueError("The tangent vector point must be a Rotation2d instance")
+            raise TypeError("The tangent vector point must be a Rotation2d instance")
 
         if self.point.shape != self.value.shape:
             raise ValueError(
@@ -117,7 +117,7 @@ class Spin2d(AbstractTangentVector[Rotation2d]):
             )
 
     @classmethod
-    def from_matrix(cls, mat: ArrayLike, point: Optional[Rotation2d] = None):
+    def from_matrix(cls, mat: ArrayLike, point: Rotation2d | None = None):
         mat = jnp.asarray(mat)
         if point is None:
             shape = mat.shape[:-2]
@@ -128,7 +128,7 @@ class Spin2d(AbstractTangentVector[Rotation2d]):
         return self.value
 
     @classmethod
-    def from_vector(cls, vec: ArrayLike, point: Optional[Rotation2d] = None):
+    def from_vector(cls, vec: ArrayLike, point: Rotation2d | None = None):
         vec = jnp.asarray(vec)
         if point is None:
             shape = vec.shape
@@ -147,7 +147,7 @@ class Spin2d(AbstractTangentVector[Rotation2d]):
         return _as_coords_vector(self.value, self.point.value)
 
     @classmethod
-    def unravel(cls, params: ArrayLike, point: Optional[Rotation2d] = None):
+    def unravel(cls, params: ArrayLike, point: Rotation2d | None = None):
         params = jnp.asarray(params)
         if point is None:
             shape = params.shape[:-1]
@@ -235,7 +235,7 @@ class Moment2d(AbstractCotangentVector[Rotation2d]):
 
     def __check_init__(self):
         if not isinstance(self.point, Rotation2d):
-            raise ValueError("The cotangent vector point must be a Rotation2d instance")
+            raise TypeError("The cotangent vector point must be a Rotation2d instance")
 
         if self.point.shape[:-2] != self.value.shape:
             raise ValueError(
@@ -245,7 +245,7 @@ class Moment2d(AbstractCotangentVector[Rotation2d]):
             )
 
     @classmethod
-    def from_vector(cls, vec: ArrayLike, point: Optional[Rotation2d] = None):
+    def from_vector(cls, vec: ArrayLike, point: Rotation2d | None = None):
         vec = jnp.asarray(vec)
         if point is None:
             shape = vec.shape

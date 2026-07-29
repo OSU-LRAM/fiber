@@ -20,7 +20,6 @@
 
 from abc import abstractmethod
 from collections.abc import Sequence
-from typing import Generic, Optional, TypeVar
 
 import equinox as eqx
 from equinox import AbstractVar
@@ -83,11 +82,8 @@ class AbstractGroupElement(eqx.Module):
         raise NotImplementedError
 
 
-_GroupElement = TypeVar("_GroupElement", bound=AbstractGroupElement)
-
-
-class AbstractTangentVector(eqx.Module, Generic[_GroupElement]):
-    point: AbstractVar[_GroupElement]
+class AbstractTangentVector[GroupElement: AbstractGroupElement](eqx.Module):
+    point: AbstractVar[GroupElement]
     value: AbstractVar[Array]
     nv: AbstractVar[int]
     nx: AbstractVar[int]
@@ -102,7 +98,7 @@ class AbstractTangentVector(eqx.Module, Generic[_GroupElement]):
 
     @classmethod
     @abstractmethod
-    def from_matrix(cls, mat: ArrayLike, point: Optional[_GroupElement] = None):
+    def from_matrix(cls, mat: ArrayLike, point: GroupElement | None = None):
         raise NotImplementedError
 
     @abstractmethod
@@ -111,7 +107,7 @@ class AbstractTangentVector(eqx.Module, Generic[_GroupElement]):
 
     @classmethod
     @abstractmethod
-    def from_vector(cls, vec: ArrayLike, point: Optional[_GroupElement] = None):
+    def from_vector(cls, vec: ArrayLike, point: GroupElement | None = None):
         raise NotImplementedError
 
     @abstractmethod
@@ -129,7 +125,7 @@ class AbstractTangentVector(eqx.Module, Generic[_GroupElement]):
 
     @classmethod
     @abstractmethod
-    def unravel(cls, params: ArrayLike, point: Optional[_GroupElement] = None):
+    def unravel(cls, params: ArrayLike, point: GroupElement | None = None):
         raise NotImplementedError
 
     @abstractmethod
@@ -155,8 +151,8 @@ class AbstractTangentVector(eqx.Module, Generic[_GroupElement]):
         raise NotImplementedError
 
 
-class AbstractCotangentVector(eqx.Module, Generic[_GroupElement]):
-    point: AbstractVar[_GroupElement]
+class AbstractCotangentVector[GroupElement: AbstractGroupElement](eqx.Module):
+    point: AbstractVar[GroupElement]
     value: AbstractVar[Array]
     nf: AbstractVar[int]
     nx: AbstractVar[int]
@@ -171,7 +167,7 @@ class AbstractCotangentVector(eqx.Module, Generic[_GroupElement]):
 
     @classmethod
     @abstractmethod
-    def from_vector(cls, vec: ArrayLike, point: Optional[_GroupElement] = None):
+    def from_vector(cls, vec: ArrayLike, point: GroupElement | None = None):
         raise NotImplementedError
 
     @abstractmethod

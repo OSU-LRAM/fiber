@@ -18,7 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from typing import Callable, ClassVar, Generic, TypeAlias, TypeVar, cast
+from collections.abc import Callable
+from typing import ClassVar, cast
 
 import jax.tree_util as jtu
 import optimistix as optx
@@ -37,12 +38,9 @@ from .._groups._element import AbstractCotangentVector, AbstractTangentVector
 from .._local_interpolation import LocalLeftBundleInterpolation as LocalInterpolation
 from ._term import ImplicitVariationalTerm, VariationalDiffusionTerm
 
-_V = TypeVar("_V", bound=AbstractTangentVector)
-_CV = TypeVar("_CV", bound=AbstractCotangentVector)
-
-_ErrorEstimate: TypeAlias = None
-_SolverState: TypeAlias = None
-_Terms: TypeAlias = MultiTerm[tuple[ImplicitVariationalTerm, VariationalDiffusionTerm]]
+type _ErrorEstimate = None
+type _SolverState = None
+type _Terms = MultiTerm[tuple[ImplicitVariationalTerm, VariationalDiffusionTerm]]
 
 
 def _implicit_relation(v: Array, solver_args: Args) -> Array:
@@ -52,7 +50,9 @@ def _implicit_relation(v: Array, solver_args: Args) -> Array:
     return diff.value
 
 
-class LieSVI(AbstractImplicitSolver, AbstractStratonovichSolver, Generic[_V, _CV]):
+class LieSVI[VectorT: AbstractTangentVector, CovectorT: AbstractCotangentVector](
+    AbstractImplicitSolver, AbstractStratonovichSolver
+):
     term_structure: ClassVar = _Terms
     interpolation_cls: ClassVar[Callable[..., LocalInterpolation]] = LocalInterpolation
     root_finder: AbstractRootFinder = optx.Chord(rtol=1e-3, atol=1e-4)  # type: ignore
@@ -71,7 +71,7 @@ class LieSVI(AbstractImplicitSolver, AbstractStratonovichSolver, Generic[_V, _CV
         terms: _Terms,
         t0: RealScalarLike,
         t1: RealScalarLike,
-        y0: _V,
+        y0: VectorT,
         args: Args,
     ) -> _SolverState:
         del terms, t0, t1, y0, args
@@ -82,11 +82,11 @@ class LieSVI(AbstractImplicitSolver, AbstractStratonovichSolver, Generic[_V, _CV
         terms: _Terms,
         t0: RealScalarLike,
         t1: RealScalarLike,
-        y0: _V,
+        y0: VectorT,
         args: Args,
         solver_state: _SolverState,
         made_jump: BoolScalarLike,
-    ) -> tuple[_V, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
+    ) -> tuple[VectorT, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
         drift, diffusion = jtu.tree_map(lambda t: cast(WrapTerm, t), terms.terms)
 
         dt = drift.contr(t0, t1)
@@ -111,7 +111,7 @@ class LieSVI(AbstractImplicitSolver, AbstractStratonovichSolver, Generic[_V, _CV
         k1 = nonlinear_sol.value
 
         y1 = type(y0).from_vector(k1, point=k0.point)
-        dense_info = dict(y0=y0, y1=y1)
+        dense_info = {"y0": y0, "y1": y1}
         solver_state = None
         result = RESULTS.promote(nonlinear_sol.result)
 
@@ -121,7 +121,7 @@ class LieSVI(AbstractImplicitSolver, AbstractStratonovichSolver, Generic[_V, _CV
         self,
         terms: _Terms,
         t0: RealScalarLike,
-        y0: _V,
+        y0: VectorT,
         args: Args,
-    ) -> _CV:
+    ) -> CovectorT:
         raise NotImplementedError

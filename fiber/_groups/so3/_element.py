@@ -20,7 +20,7 @@
 
 import functools
 from collections.abc import Sequence
-from typing import Optional, Union, cast
+from typing import cast
 
 import equinox as eqx
 import jax.numpy as jnp
@@ -64,7 +64,7 @@ class Rotation3d(AbstractGroupElement):
     def from_euler(
         cls,
         seq: str,
-        angles: Union[ArrayLike, Sequence[ArrayLike]],
+        angles: ArrayLike | Sequence[ArrayLike],
         degrees: bool = False,
     ):
         return cls(R.from_euler(seq, jnp.asarray(angles), degrees).as_matrix())
@@ -120,7 +120,7 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
 
     def __check_init__(self):
         if not isinstance(self.point, Rotation3d):
-            raise ValueError("The tangent vector point must be a Rotation3d instance")
+            raise TypeError("The tangent vector point must be a Rotation3d instance")
 
         if self.point.shape != self.value.shape:
             raise ValueError(
@@ -129,7 +129,7 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
             )
 
     @classmethod
-    def from_matrix(cls, mat: ArrayLike, point: Optional[Rotation3d] = None):
+    def from_matrix(cls, mat: ArrayLike, point: Rotation3d | None = None):
         mat = jnp.asarray(mat)
         if point is None:
             shape = mat.shape[:-2]
@@ -140,7 +140,7 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
         return self.value
 
     @classmethod
-    def from_vector(cls, vec: ArrayLike, point: Optional[Rotation3d] = None):
+    def from_vector(cls, vec: ArrayLike, point: Rotation3d | None = None):
         vec = jnp.asarray(vec)
         if point is None:
             shape = vec.shape[:-1]
@@ -159,7 +159,7 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
         return _as_coords_vector(self.value, self.point.value)
 
     @classmethod
-    def unravel(cls, params: ArrayLike, point: Optional[Rotation3d] = None):
+    def unravel(cls, params: ArrayLike, point: Rotation3d | None = None):
         params = jnp.asarray(params)
         if point is None:
             shape = params.shape[:-1]
@@ -241,7 +241,7 @@ class Moment3d(AbstractCotangentVector[Rotation3d]):
 
     def __check_init__(self):
         if not isinstance(self.point, Rotation3d):
-            raise ValueError("The cotangent vector point must be a Rotation3d instance")
+            raise TypeError("The cotangent vector point must be a Rotation3d instance")
 
         if self.point.shape[:-2] != self.value.shape[:-1]:
             raise ValueError(
@@ -251,7 +251,7 @@ class Moment3d(AbstractCotangentVector[Rotation3d]):
             )
 
     @classmethod
-    def from_vector(cls, vec: ArrayLike, point: Optional[Rotation3d] = None):
+    def from_vector(cls, vec: ArrayLike, point: Rotation3d | None = None):
         vec = jnp.asarray(vec)
         if point is None:
             shape = vec.shape[:-1]

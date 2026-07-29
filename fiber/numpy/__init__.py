@@ -27,10 +27,10 @@ from .._vecfuncs import skew2, skew3, softclip, softnorm, vex2, vex3
 __all__ = [
     "se2",
     "se3",
-    "so2",
-    "so3",
     "skew2",
     "skew3",
+    "so2",
+    "so3",
     "softclip",
     "softnorm",
     "vex2",

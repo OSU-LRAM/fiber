@@ -19,7 +19,6 @@
 # THE SOFTWARE.
 
 from collections.abc import Sequence
-from typing import Optional
 
 import jax.numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
@@ -37,7 +36,7 @@ def gaussian(  # type: ignore[reportRedeclaration]
     key: PRNGKeyArray,
     mean: Rotation2d,
     cov: Array,
-    shape: Optional[Sequence[int]] = None,
+    shape: Sequence[int] | None = None,
     method: str = "cholesky",
     left: bool = True,
 ) -> tuple[Rotation2d, Spin2d]:
@@ -47,11 +46,11 @@ def gaussian(  # type: ignore[reportRedeclaration]
 
 
 @dispatch
-def gaussian(
+def gaussian(  # type: ignore[reportRedeclaration]
     key: PRNGKeyArray,
     mean: Rotation3d,
     cov: Array,
-    shape: Optional[Sequence[int]] = None,
+    shape: Sequence[int] | None = None,
     method: str = "cholesky",
     left: bool = True,
 ) -> tuple[Rotation3d, Spin3d]:
@@ -61,11 +60,11 @@ def gaussian(
 
 
 @dispatch
-def gaussian(
+def gaussian(  # type: ignore[reportRedeclaration]
     key: PRNGKeyArray,
     mean: Isometry2d,
     cov: Array,
-    shape: Optional[Sequence[int]] = None,
+    shape: Sequence[int] | None = None,
     method: str = "cholesky",
     left: bool = True,
 ) -> tuple[Isometry2d, Twist2d]:
@@ -75,11 +74,11 @@ def gaussian(
 
 
 @dispatch
-def gaussian(
+def gaussian(  # type: ignore[reportRedeclaration]
     key: PRNGKeyArray,
     mean: Isometry3d,
     cov: Array,
-    shape: Optional[Sequence[int]] = None,
+    shape: Sequence[int] | None = None,
     method: str = "cholesky",
     left: bool = True,
 ) -> tuple[Isometry3d, Twist3d]:
@@ -101,7 +100,7 @@ def mean(  # type: ignore[reportRedeclaration]
 
 
 @dispatch
-def mean(
+def mean(  # type: ignore[reportRedeclaration]
     samples: Rotation3d,
     rtol: float = 1e-6,
     atol=1e-6,
@@ -113,7 +112,7 @@ def mean(
 
 
 @dispatch
-def mean(
+def mean(  # type: ignore[reportRedeclaration]
     samples: Isometry2d,
     rtol: float = 1e-6,
     atol=1e-6,
@@ -125,7 +124,7 @@ def mean(
 
 
 @dispatch
-def mean(
+def mean(  # type: ignore[reportRedeclaration]
     samples: Isometry3d,
     rtol: float = 1e-6,
     atol=1e-6,
@@ -142,15 +141,15 @@ def cov(mean: Rotation2d, samples: Rotation2d) -> Array:  # type: ignore[reportR
 
 
 @dispatch
-def cov(mean: Rotation3d, samples: Rotation3d) -> Array:
+def cov(mean: Rotation3d, samples: Rotation3d) -> Array:  # type: ignore[reportRedeclaration]
     return so3.random.cov(mean.value, samples.value)
 
 
 @dispatch
-def cov(mean: Isometry2d, samples: Isometry2d) -> Array:
+def cov(mean: Isometry2d, samples: Isometry2d) -> Array:  # type: ignore[reportRedeclaration]
     return se2.random.cov(mean.value, samples.value)
 
 
 @dispatch
-def cov(mean: Isometry3d, samples: Isometry3d) -> Array:
+def cov(mean: Isometry3d, samples: Isometry3d) -> Array:  # type: ignore[reportRedeclaration]
     return se3.random.cov(mean.value, samples.value)

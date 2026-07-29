@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from typing import Generic, Optional, TypeVar, cast
+from typing import cast
 
 import equinox as eqx
 import jax
@@ -31,9 +31,6 @@ from ._groups._element import AbstractGroupElement, AbstractTangentVector
 from ._interpolation import left_glerp, lerp
 from ._operations import expm, rminus
 
-_GroupElement = TypeVar("_GroupElement", bound=AbstractGroupElement)
-_TangentVector = TypeVar("_TangentVector", bound=AbstractTangentVector)
-
 
 def linear_rescale(t0, t, t1) -> Array:
     cond = t0 == t1
@@ -42,15 +39,17 @@ def linear_rescale(t0, t, t1) -> Array:
     return numerator / denominator
 
 
-class LocalGeodesicInterpolation(AbstractLocalInterpolation, Generic[_GroupElement]):
+class LocalGeodesicInterpolation[GroupT: AbstractGroupElement](
+    AbstractLocalInterpolation
+):
     t0: RealScalarLike  # type: ignore[reportIncompatibleVariableOverride]
     t1: RealScalarLike  # type: ignore[reportIncompatibleVariableOverride]
-    y0: _GroupElement
-    y1: _GroupElement
+    y0: GroupT
+    y1: GroupT
 
     def evaluate(
-        self, t0: RealScalarLike, t1: Optional[RealScalarLike] = None, left: bool = True
-    ) -> _GroupElement:
+        self, t0: RealScalarLike, t1: RealScalarLike | None = None, left: bool = True
+    ) -> GroupT:
         del left
         with jax.numpy_dtype_promotion("standard"):
             if t1 is None:
@@ -59,18 +58,20 @@ class LocalGeodesicInterpolation(AbstractLocalInterpolation, Generic[_GroupEleme
             else:
                 coeff = (t1 - t0) / (self.t1 - self.t0)
                 incr = expm(coeff * rminus(self.y1, self.y0))  # type: ignore
-                return cast(_GroupElement, incr)
+                return cast(GroupT, incr)
 
 
-class LocalLeftBundleInterpolation(AbstractLocalInterpolation, Generic[_TangentVector]):
+class LocalLeftBundleInterpolation[VectorT: AbstractTangentVector](
+    AbstractLocalInterpolation
+):
     t0: RealScalarLike  # type: ignore[reportIncompatibleVariableOverride]
     t1: RealScalarLike  # type: ignore[reportIncompatibleVariableOverride]
-    y0: _TangentVector
-    y1: _TangentVector
+    y0: VectorT
+    y1: VectorT
 
     def evaluate(
-        self, t0: RealScalarLike, t1: Optional[RealScalarLike] = None, left: bool = True
-    ) -> _TangentVector:
+        self, t0: RealScalarLike, t1: RealScalarLike | None = None, left: bool = True
+    ) -> VectorT:
         del left
         with jax.numpy_dtype_promotion("standard"):
             if t1 is None:

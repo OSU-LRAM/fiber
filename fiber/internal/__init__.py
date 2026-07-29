@@ -34,10 +34,10 @@ __all__ = [
     "VF",
     "Args",
     "ArrayLike",
+    "BoolScalarLike",
     "Control",
     "DenseInfo",
     "FloatScalarLike",
     "IntScalarLike",
     "RealScalarLike",
-    "BoolScalarLike",
 ]

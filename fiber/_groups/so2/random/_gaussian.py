@@ -19,7 +19,6 @@
 # THE SOFTWARE.
 
 from collections.abc import Sequence
-from typing import Optional
 
 import jax.numpy as jnp
 import jax.random as jr
@@ -33,7 +32,7 @@ from .._operations import expm, logm, lplus, rminus, rplus
 def sample_lie_algebra(
     key: PRNGKeyArray,
     cov: Array,
-    shape: Optional[Sequence[int]] = None,
+    shape: Sequence[int] | None = None,
     method: str = "cholesky",
 ) -> Array:
     del method
@@ -47,7 +46,7 @@ def gaussian(
     key: PRNGKeyArray,
     mean: Array,
     cov: Array,
-    shape: Optional[Sequence[int]] = None,
+    shape: Sequence[int] | None = None,
     method: str = "cholesky",
     left: bool = True,
 ) -> tuple[Array, Array]:
@@ -64,7 +63,7 @@ def gaussian(
 
 def normal(
     key: PRNGKeyArray,
-    shape: Optional[Sequence[int]] = None,
+    shape: Sequence[int] | None = None,
     left: bool = True,
 ) -> tuple[Array, Array]:
     return gaussian(key, jnp.eye(2), jnp.array(1.0), shape, left=left)

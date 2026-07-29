@@ -18,70 +18,91 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from typing import Callable, Generic, TypeVar, cast
+from collections.abc import Callable
+from typing import cast
 
 from diffrax import AbstractTerm
 
-from .._custom_types import Args, Control, RealScalarLike
+from .._custom_types import Args, RealScalarLike
 from .._groups._element import AbstractCotangentVector, AbstractTangentVector
 
-_V = TypeVar("_V", bound=AbstractTangentVector)
-_CV = TypeVar("_CV", bound=AbstractCotangentVector)
-_Control = TypeVar("_Control", bound=Control)
 
+class SharpTerm[
+    VectorT: AbstractTangentVector,
+    CovectorT: AbstractCotangentVector,
+    Control,
+](AbstractTerm[CovectorT, Control]):
+    vector_field: Callable[[RealScalarLike, VectorT, Args], CovectorT]
+    dual_metric_fn: Callable[[VectorT, CovectorT], VectorT]
 
-class SharpTerm(AbstractTerm[_CV, _Control], Generic[_V, _CV, _Control]):
-    vector_field: Callable[[RealScalarLike, _V, Args], _CV]
-    dual_metric_fn: Callable[[_V, _CV], _V]
-
-    def vf(self, t: RealScalarLike, y: _V, args: Args) -> _CV:
+    def vf(self, t: RealScalarLike, y: VectorT, args: Args) -> CovectorT:
         return self.vector_field(t, y, args)
 
-    def dual_metric(self, y0: _V, k1: _CV) -> _V:
+    def dual_metric(self, y0: VectorT, k1: CovectorT) -> VectorT:
         return self.dual_metric_fn(y0, k1)
 
-    def contr(self, t0: RealScalarLike, t1: RealScalarLike, **kwargs) -> _Control:
-        return cast(_Control, t1 - t0)
+    def contr(self, t0: RealScalarLike, t1: RealScalarLike, **kwargs) -> Control:
+        return cast(Control, t1 - t0)
 
-    def prod(self, vf: _CV, control: RealScalarLike) -> _CV:
+    def prod(self, vf: CovectorT, control: RealScalarLike) -> CovectorT:  # type: ignore
         return vf * control  # type: ignore
 
-    def vf_prod(self, t: RealScalarLike, y: _V, args: Args, control: _Control) -> _CV:
-        return self.prod(self.vf(t, y, args), control)
+    def vf_prod(
+        self, t: RealScalarLike, y: VectorT, args: Args, control: Control
+    ) -> CovectorT:
+        return self.prod(self.vf(t, y, args), control)  # type: ignore
 
 
-class ImplicitVariationalTerm(AbstractTerm[_CV, _Control], Generic[_V, _CV, _Control]):
-    vector_field: Callable[[RealScalarLike, _V, Args, _Control], _CV]
-    implicit_f: Callable[[RealScalarLike, _V, Args, _Control], _CV]
+class ImplicitVariationalTerm[
+    VectorT: AbstractTangentVector,
+    CovectorT: AbstractCotangentVector,
+    Control,
+](AbstractTerm[CovectorT, Control]):
+    vector_field: Callable[[RealScalarLike, VectorT, Args, Control], CovectorT]
+    implicit_f: Callable[[RealScalarLike, VectorT, Args, Control], CovectorT]
 
-    def vf(self, t: RealScalarLike, y: _V, args: Args, control: _Control = 0.0) -> _CV:
+    def vf(
+        self, t: RealScalarLike, y: VectorT, args: Args, control: Control = 0.0
+    ) -> CovectorT:
         return self.vector_field(t, y, args, control)
 
-    def relation(self, t: RealScalarLike, y: _V, args: Args, control: _Control) -> _CV:
+    def relation(
+        self, t: RealScalarLike, y: VectorT, args: Args, control: Control
+    ) -> CovectorT:
         return self.implicit_f(t, y, args, control)
 
-    def contr(self, t0: RealScalarLike, t1: RealScalarLike, **kwargs) -> _Control:
-        return cast(_Control, t1 - t0)
+    def contr(self, t0: RealScalarLike, t1: RealScalarLike, **kwargs) -> Control:
+        return cast(Control, t1 - t0)
 
-    def prod(self, vf: _CV, control: RealScalarLike) -> _V:
+    def prod(self, vf: CovectorT, control: RealScalarLike) -> VectorT:  # type: ignore
         raise NotImplementedError
 
-    def vf_prod(self, t: RealScalarLike, y: _V, args: Args, control: _Control) -> _CV:
+    def vf_prod(
+        self, t: RealScalarLike, y: VectorT, args: Args, control: Control
+    ) -> CovectorT:
         return self.vf(t, y, args, control)
 
 
-class VariationalDiffusionTerm(AbstractTerm[_CV, _Control], Generic[_V, _CV, _Control]):
-    vector_field: Callable[[RealScalarLike, _V, Args, _Control], _CV]
-    control: _Control
+class VariationalDiffusionTerm[
+    VectorT: AbstractTangentVector,
+    CovectorT: AbstractCotangentVector,
+    Control,
+](AbstractTerm[CovectorT, Control]):
+    vector_field: Callable[[RealScalarLike, VectorT, Args, Control], CovectorT]
+    control: Control
 
-    def vf(self, t: RealScalarLike, y: _V, args: Args, control: _Control = 0.0) -> _CV:
+    def vf(
+        self, t: RealScalarLike, y: VectorT, args: Args, control: Control = 0.0
+    ) -> CovectorT:
         return self.vector_field(t, y, args, control)
 
-    def contr(self, t0: RealScalarLike, t1: RealScalarLike, **kwargs) -> _Control:
-        return self.control.evaluate(t0, t1, **kwargs)
+    def contr(self, t0: RealScalarLike, t1: RealScalarLike, **kwargs) -> Control:
+        return self.control.evaluate(t0, t1, **kwargs)  # type: ignore
 
-    def prod(self, vf: _CV, control: RealScalarLike) -> _V:
+    def prod(self, vf: CovectorT, control: RealScalarLike) -> VectorT:  # type: ignore
         raise NotImplementedError
 
-    def vf_prod(self, t: RealScalarLike, y: _V, args: Args, control: _Control) -> _CV:
+    def vf_prod(
+        self, t: RealScalarLike, y: VectorT, args: Args, control: Control
+    ) -> CovectorT:
         return self.vf(t, y, args, control)

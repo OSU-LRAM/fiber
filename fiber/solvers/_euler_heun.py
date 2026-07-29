@@ -18,23 +18,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from typing import Callable, ClassVar, Generic, TypeAlias
+from collections.abc import Callable
+from typing import ClassVar
 
 import equinox as eqx
 from diffrax import RESULTS, AbstractStratonovichSolver, AbstractTerm, MultiTerm
 from jaxtyping import Array
 
 from .._custom_types import VF, Args, BoolScalarLike, DenseInfo, RealScalarLike
+from .._groups import AbstractCotangentVector, AbstractTangentVector
 from .._local_interpolation import LocalLeftBundleInterpolation as LocalInterpolation
 from .._operations import rplus
-from ._term import _CV, _V, SharpTerm
+from ._term import SharpTerm
 
-_ErrorEstimate: TypeAlias = None
-_SolverState: TypeAlias = None
-_Terms: TypeAlias = MultiTerm[tuple[SharpTerm, AbstractTerm]]
+type _ErrorEstimate = None
+type _SolverState = None
+type _Terms = MultiTerm[tuple[SharpTerm, AbstractTerm]]
 
 
-class EulerHeun(AbstractStratonovichSolver, Generic[_V, _CV]):
+class EulerHeun[VectorT: AbstractTangentVector, CovectorT: AbstractCotangentVector](
+    AbstractStratonovichSolver
+):
     term_structure: ClassVar = _Terms
     interpolation_cls: ClassVar[Callable[..., LocalInterpolation]] = LocalInterpolation
 
@@ -51,7 +55,7 @@ class EulerHeun(AbstractStratonovichSolver, Generic[_V, _CV]):
         terms: _Terms,
         t0: RealScalarLike,
         t1: RealScalarLike,
-        y0: _V,
+        y0: VectorT,
         args: Args,
     ) -> _SolverState:
         del terms, t0, t1, y0, args
@@ -62,11 +66,11 @@ class EulerHeun(AbstractStratonovichSolver, Generic[_V, _CV]):
         terms: _Terms,
         t0: RealScalarLike,
         t1: RealScalarLike,
-        y0: _V,
+        y0: VectorT,
         args: Args,
         solver_state: _SolverState,
         made_jump: BoolScalarLike,
-    ) -> tuple[_V, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
+    ) -> tuple[VectorT, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
         del solver_state, made_jump
 
         drift, diffusion = terms.terms
@@ -85,7 +89,7 @@ class EulerHeun(AbstractStratonovichSolver, Generic[_V, _CV]):
         y1 = y0 + vf
         y1 = eqx.tree_at(lambda w: w.point.value, y1, rplus(y0.point, f0).value)
 
-        dense_info = dict(y0=y0, y1=y1)
+        dense_info = {"y0": y0, "y1": y1}
         return y1, None, dense_info, None, RESULTS.successful
 
     def func(

@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from typing import Generic, Optional, TypeVar, cast
+from typing import cast
 
 import equinox as eqx
 import jax
@@ -31,13 +31,10 @@ from ._groups._element import AbstractGroupElement, AbstractTangentVector
 from ._interpolation import left_glerp, lerp
 from ._operations import inv
 
-_GroupElement = TypeVar("_GroupElement", bound=AbstractGroupElement)
-_TangentVector = TypeVar("_TangentVector", bound=AbstractTangentVector)
 
-
-class GeodesicInterpolation(AbstractGlobalInterpolation, Generic[_GroupElement]):
+class GeodesicInterpolation[GroupT: AbstractGroupElement](AbstractGlobalInterpolation):
     ts: Real[Array, " times"]  # type: ignore[reportIncompatibleVariableOverride]
-    ys: _GroupElement
+    ys: GroupT
 
     def __check_init__(self):
         if self.ys.shape[0] != self.ts.shape[0]:
@@ -52,8 +49,8 @@ class GeodesicInterpolation(AbstractGlobalInterpolation, Generic[_GroupElement])
 
     @eqx.filter_jit
     def evaluate(
-        self, t0: RealScalarLike, t1: Optional[RealScalarLike] = None, left: bool = True
-    ) -> _GroupElement:
+        self, t0: RealScalarLike, t1: RealScalarLike | None = None, left: bool = True
+    ) -> GroupT:
         with jax.numpy_dtype_promotion("standard"):
             if t1 is not None:
                 y0, y1 = jtu.tree_map(self.evaluate, [t0, t1], [left, left])
@@ -72,9 +69,11 @@ class GeodesicInterpolation(AbstractGlobalInterpolation, Generic[_GroupElement])
             return left_glerp(prev_y, next_y, coeff)
 
 
-class LeftBundleInterpolation(AbstractGlobalInterpolation, Generic[_TangentVector]):
+class LeftBundleInterpolation[VectorT: AbstractTangentVector](
+    AbstractGlobalInterpolation
+):
     ts: Real[Array, " times"]  # type: ignore[reportIncompatibleVariableOverride]
-    ys: _TangentVector
+    ys: VectorT
 
     def __check_init__(self):
         if self.ys.shape[0] != self.ts.shape[0]:
@@ -89,8 +88,8 @@ class LeftBundleInterpolation(AbstractGlobalInterpolation, Generic[_TangentVecto
 
     @eqx.filter_jit
     def evaluate(
-        self, t0: RealScalarLike, t1: Optional[RealScalarLike] = None, left: bool = True
-    ) -> _TangentVector:
+        self, t0: RealScalarLike, t1: RealScalarLike | None = None, left: bool = True
+    ) -> VectorT:
         with jax.numpy_dtype_promotion("standard"):
             if t1 is not None:
                 y0, y1 = jtu.tree_map(self.evaluate, [t0, t1], [left, left])

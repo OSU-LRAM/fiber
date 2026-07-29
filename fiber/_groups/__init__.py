@@ -26,11 +26,11 @@ from ._element import (
 )
 
 __all__ = [
+    "AbstractCotangentVector",
+    "AbstractGroupElement",
+    "AbstractTangentVector",
     "se2",
     "se3",
     "so2",
     "so3",
-    "AbstractGroupElement",
-    "AbstractTangentVector",
-    "AbstractCotangentVector",
 ]

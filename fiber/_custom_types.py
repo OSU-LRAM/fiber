@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from jaxtyping import Array, Bool, Float, Int, PyTree, Real, Shaped
@@ -17,7 +17,7 @@ else:
     FloatScalarLike = Float[_ArrayLike, ""]
     IntScalarLike = Int[_ArrayLike, ""]
     RealScalarLike = Real[_ArrayLike, ""]
-    ArrayLike = Union[_ArrayLike, Any]
+    ArrayLike = _ArrayLike | Any
 
 # the following types come from:
 # https://github.com/patrick-kidger/diffrax/blob/main/diffrax/_custom_types.py

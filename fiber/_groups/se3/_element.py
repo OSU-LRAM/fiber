@@ -20,7 +20,7 @@
 
 import functools
 from collections.abc import Sequence
-from typing import Optional, Union, cast
+from typing import cast
 
 import equinox as eqx
 import jax.numpy as jnp
@@ -69,7 +69,7 @@ class Isometry3d(AbstractGroupElement):
     def from_euclidean(
         cls,
         seq: str,
-        eucl: Union[ArrayLike, Sequence[ArrayLike]],
+        eucl: ArrayLike | Sequence[ArrayLike],
         degrees: bool = False,
     ):
         fn = functools.partial(_from_euclidean, seq=seq, degrees=degrees)
@@ -131,9 +131,7 @@ class Twist3d(AbstractTangentVector[Isometry3d]):
 
     def __check_init__(self):
         if not isinstance(self.point, Isometry3d):
-            raise ValueError(
-                "The tangent vector point must be a `Isometry3d` instance!"
-            )
+            raise TypeError("The tangent vector point must be a `Isometry3d` instance!")
 
         if self.point.shape != self.value.shape:
             raise ValueError(
@@ -142,7 +140,7 @@ class Twist3d(AbstractTangentVector[Isometry3d]):
             )
 
     @classmethod
-    def from_matrix(cls, mat: ArrayLike, point: Optional[Isometry3d] = None):
+    def from_matrix(cls, mat: ArrayLike, point: Isometry3d | None = None):
         mat = jnp.asarray(mat)
         if point is None:
             shape = mat.shape[:-2]
@@ -153,7 +151,7 @@ class Twist3d(AbstractTangentVector[Isometry3d]):
         return self.value
 
     @classmethod
-    def from_vector(cls, vec: ArrayLike, point: Optional[Isometry3d] = None):
+    def from_vector(cls, vec: ArrayLike, point: Isometry3d | None = None):
         vec = jnp.asarray(vec)
         if point is None:
             shape = vec.shape[:-1]
@@ -172,7 +170,7 @@ class Twist3d(AbstractTangentVector[Isometry3d]):
         return _as_coords_vector(self.value, self.point.value)
 
     @classmethod
-    def unravel(cls, params: ArrayLike, point: Optional[Isometry3d] = None):
+    def unravel(cls, params: ArrayLike, point: Isometry3d | None = None):
         params = jnp.asarray(params)
         if point is None:
             shape = params.shape[:-1]
@@ -254,7 +252,7 @@ class Wrench3d(AbstractCotangentVector[Isometry3d]):
 
     def __check_init__(self):
         if not isinstance(self.point, Isometry3d):
-            raise ValueError(
+            raise TypeError(
                 "The cotangent vector point must be a `Isometry3d` instance!"
             )
 
@@ -266,7 +264,7 @@ class Wrench3d(AbstractCotangentVector[Isometry3d]):
             )
 
     @classmethod
-    def from_vector(cls, vec: ArrayLike, point: Optional[Isometry3d] = None):
+    def from_vector(cls, vec: ArrayLike, point: Isometry3d | None = None):
         vec = jnp.asarray(vec)
         if point is None:
             shape = vec.shape[:-1]

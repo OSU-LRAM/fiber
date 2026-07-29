@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Sequence
-from typing import Optional, cast
+from typing import cast
 
 import equinox as eqx
 import jax.numpy as jnp
@@ -121,9 +121,7 @@ class Twist2d(AbstractTangentVector[Isometry2d]):
 
     def __check_init__(self):
         if not isinstance(self.point, Isometry2d):
-            raise ValueError(
-                "The tangent vector point must be a `Isometry2d` instance!"
-            )
+            raise TypeError("The tangent vector point must be a `Isometry2d` instance!")
 
         if self.point.shape != self.value.shape:
             raise ValueError(
@@ -132,7 +130,7 @@ class Twist2d(AbstractTangentVector[Isometry2d]):
             )
 
     @classmethod
-    def from_matrix(cls, mat: ArrayLike, point: Optional[Isometry2d] = None):
+    def from_matrix(cls, mat: ArrayLike, point: Isometry2d | None = None):
         mat = jnp.asarray(mat)
         if point is None:
             shape = mat.shape[:-2]
@@ -143,7 +141,7 @@ class Twist2d(AbstractTangentVector[Isometry2d]):
         return self.value
 
     @classmethod
-    def from_vector(cls, vec: ArrayLike, point: Optional[Isometry2d] = None):
+    def from_vector(cls, vec: ArrayLike, point: Isometry2d | None = None):
         vec = jnp.asarray(vec)
         if point is None:
             shape = vec.shape[:-1]
@@ -162,7 +160,7 @@ class Twist2d(AbstractTangentVector[Isometry2d]):
         return _as_coords_vector(self.value, self.point.value)
 
     @classmethod
-    def unravel(cls, params: ArrayLike, point: Optional[Isometry2d] = None):
+    def unravel(cls, params: ArrayLike, point: Isometry2d | None = None):
         params = jnp.asarray(params)
         if point is None:
             shape = params.shape[:-1]
@@ -244,7 +242,7 @@ class Wrench2d(AbstractCotangentVector[Isometry2d]):
 
     def __check_init__(self):
         if not isinstance(self.point, Isometry2d):
-            raise ValueError(
+            raise TypeError(
                 "The cotangent vector point must be a `Isometry2d` instance!"
             )
 
@@ -256,7 +254,7 @@ class Wrench2d(AbstractCotangentVector[Isometry2d]):
             )
 
     @classmethod
-    def from_vector(cls, vec: ArrayLike, point: Optional[Isometry2d] = None):
+    def from_vector(cls, vec: ArrayLike, point: Isometry2d | None = None):
         vec = jnp.asarray(vec)
         if point is None:
             shape = vec.shape[:-1]

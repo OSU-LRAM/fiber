@@ -19,6 +19,18 @@
 # THE SOFTWARE.
 
 from . import se2, se3, so2, so3
-from ._element import AbstractGroupElement, AbstractTangentVector
+from ._element import (
+    AbstractCotangentVector,
+    AbstractGroupElement,
+    AbstractTangentVector,
+)
 
-__all__ = ["se2", "se3", "so2", "so3", "AbstractGroupElement", "AbstractTangentVector"]
+__all__ = [
+    "se2",
+    "se3",
+    "so2",
+    "so3",
+    "AbstractGroupElement",
+    "AbstractTangentVector",
+    "AbstractCotangentVector",
+]

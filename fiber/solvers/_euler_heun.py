@@ -23,10 +23,9 @@ from typing import ClassVar
 
 import equinox as eqx
 from diffrax import RESULTS, AbstractStratonovichSolver, AbstractTerm, MultiTerm
-from jaxtyping import Array
 
 from .._custom_types import VF, Args, BoolScalarLike, DenseInfo, RealScalarLike
-from .._groups import AbstractCotangentVector, AbstractTangentVector
+from .._groups import AbstractTangentVector
 from .._local_interpolation import LocalLeftBundleInterpolation as LocalInterpolation
 from .._operations import rplus
 from ._term import SharpTerm
@@ -34,11 +33,10 @@ from ._term import SharpTerm
 type _ErrorEstimate = None
 type _SolverState = None
 type _Terms = MultiTerm[tuple[SharpTerm, AbstractTerm]]
+type _V = AbstractTangentVector
 
 
-class EulerHeun[VectorT: AbstractTangentVector, CovectorT: AbstractCotangentVector](
-    AbstractStratonovichSolver
-):
+class EulerHeun(AbstractStratonovichSolver):
     term_structure: ClassVar = _Terms
     interpolation_cls: ClassVar[Callable[..., LocalInterpolation]] = LocalInterpolation
 
@@ -55,7 +53,7 @@ class EulerHeun[VectorT: AbstractTangentVector, CovectorT: AbstractCotangentVect
         terms: _Terms,
         t0: RealScalarLike,
         t1: RealScalarLike,
-        y0: VectorT,
+        y0: _V,
         args: Args,
     ) -> _SolverState:
         del terms, t0, t1, y0, args
@@ -66,11 +64,11 @@ class EulerHeun[VectorT: AbstractTangentVector, CovectorT: AbstractCotangentVect
         terms: _Terms,
         t0: RealScalarLike,
         t1: RealScalarLike,
-        y0: VectorT,
+        y0: _V,
         args: Args,
         solver_state: _SolverState,
         made_jump: BoolScalarLike,
-    ) -> tuple[VectorT, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
+    ) -> tuple[_V, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
         del solver_state, made_jump
 
         drift, diffusion = terms.terms
@@ -96,7 +94,7 @@ class EulerHeun[VectorT: AbstractTangentVector, CovectorT: AbstractCotangentVect
         self,
         terms: _Terms,
         t0: RealScalarLike,
-        y0: Array,
+        y0: AbstractTangentVector,
         args: Args,
     ) -> VF:
         return terms.vf(t0, y0, args)

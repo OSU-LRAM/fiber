@@ -31,9 +31,10 @@ from .._operations import rplus
 
 type _ErrorEstimate = None
 type _SolverState = None
+type _V = AbstractTangentVector
 
 
-class LieEuler[VectorT: AbstractTangentVector](AbstractItoSolver):
+class LieEuler(AbstractItoSolver):
     term_structure: ClassVar = AbstractTerm
     interpolation_cls: ClassVar[Callable[..., LocalInterpolation]] = LocalInterpolation
 
@@ -50,7 +51,7 @@ class LieEuler[VectorT: AbstractTangentVector](AbstractItoSolver):
         terms: AbstractTerm,
         t0: RealScalarLike,
         t1: RealScalarLike,
-        y0: VectorT,
+        y0: _V,
         args: Args,
     ) -> _SolverState:
         del terms, t0, t1, y0, args
@@ -61,11 +62,11 @@ class LieEuler[VectorT: AbstractTangentVector](AbstractItoSolver):
         terms: AbstractTerm,
         t0: RealScalarLike,
         t1: RealScalarLike,
-        y0: VectorT,
+        y0: _V,
         args: Args,
         solver_state: _SolverState,
         made_jump: BoolScalarLike,
-    ) -> tuple[VectorT, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
+    ) -> tuple[_V, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
         del solver_state, made_jump
 
         vf = terms.vf_prod(t0, y0, args, terms.contr(t0, t1))
@@ -79,7 +80,7 @@ class LieEuler[VectorT: AbstractTangentVector](AbstractItoSolver):
         self,
         terms: AbstractTerm,
         t0: RealScalarLike,
-        y0: VectorT,
+        y0: _V,
         args: Args,
     ) -> VF:
         return terms.vf(t0, y0, args)

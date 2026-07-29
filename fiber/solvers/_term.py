@@ -19,90 +19,69 @@
 # THE SOFTWARE.
 
 from collections.abc import Callable
-from typing import cast
+from typing import TypeVar, cast
 
 from diffrax import AbstractTerm
 
-from .._custom_types import Args, RealScalarLike
+from .._custom_types import Args, Control, RealScalarLike
 from .._groups._element import AbstractCotangentVector, AbstractTangentVector
 
+_CV = TypeVar("_CV", bound=AbstractCotangentVector)
+type _V = AbstractTangentVector
 
-class SharpTerm[
-    VectorT: AbstractTangentVector,
-    CovectorT: AbstractCotangentVector,
-    Control,
-](AbstractTerm[CovectorT, Control]):
-    vector_field: Callable[[RealScalarLike, VectorT, Args], CovectorT]
-    dual_metric_fn: Callable[[VectorT, CovectorT], VectorT]
 
-    def vf(self, t: RealScalarLike, y: VectorT, args: Args) -> CovectorT:
+class SharpTerm(AbstractTerm[_CV, Control]):
+    vector_field: Callable[[RealScalarLike, _V, Args], _CV]
+    dual_metric_fn: Callable[[_V, _CV], _V]
+
+    def vf(self, t: RealScalarLike, y: _V, args: Args) -> _CV:
         return self.vector_field(t, y, args)
 
-    def dual_metric(self, y0: VectorT, k1: CovectorT) -> VectorT:
+    def dual_metric(self, y0: _V, k1: _CV) -> _V:
         return self.dual_metric_fn(y0, k1)
 
     def contr(self, t0: RealScalarLike, t1: RealScalarLike, **kwargs) -> Control:
         return cast(Control, t1 - t0)
 
-    def prod(self, vf: CovectorT, control: RealScalarLike) -> CovectorT:  # type: ignore
+    def prod(self, vf: _CV, control: RealScalarLike) -> _CV:
         return vf * control  # type: ignore
 
-    def vf_prod(
-        self, t: RealScalarLike, y: VectorT, args: Args, control: Control
-    ) -> CovectorT:
-        return self.prod(self.vf(t, y, args), control)  # type: ignore
+    def vf_prod(self, t: RealScalarLike, y: _V, args: Args, control: Control) -> _CV:
+        return self.prod(self.vf(t, y, args), control)
 
 
-class ImplicitVariationalTerm[
-    VectorT: AbstractTangentVector,
-    CovectorT: AbstractCotangentVector,
-    Control,
-](AbstractTerm[CovectorT, Control]):
-    vector_field: Callable[[RealScalarLike, VectorT, Args, Control], CovectorT]
-    implicit_f: Callable[[RealScalarLike, VectorT, Args, Control], CovectorT]
+class ImplicitVariationalTerm(AbstractTerm[_CV, Control]):
+    vector_field: Callable[[RealScalarLike, _V, Args, Control], _CV]
+    implicit_f: Callable[[RealScalarLike, _V, Args, Control], _CV]
 
-    def vf(
-        self, t: RealScalarLike, y: VectorT, args: Args, control: Control = 0.0
-    ) -> CovectorT:
+    def vf(self, t: RealScalarLike, y: _V, args: Args, control: Control = 0.0) -> _CV:
         return self.vector_field(t, y, args, control)
 
-    def relation(
-        self, t: RealScalarLike, y: VectorT, args: Args, control: Control
-    ) -> CovectorT:
+    def relation(self, t: RealScalarLike, y: _V, args: Args, control: Control) -> _CV:
         return self.implicit_f(t, y, args, control)
 
     def contr(self, t0: RealScalarLike, t1: RealScalarLike, **kwargs) -> Control:
         return cast(Control, t1 - t0)
 
-    def prod(self, vf: CovectorT, control: RealScalarLike) -> VectorT:  # type: ignore
+    def prod(self, vf: _CV, control: RealScalarLike) -> _V:
         raise NotImplementedError
 
-    def vf_prod(
-        self, t: RealScalarLike, y: VectorT, args: Args, control: Control
-    ) -> CovectorT:
+    def vf_prod(self, t: RealScalarLike, y: _V, args: Args, control: Control) -> _CV:
         return self.vf(t, y, args, control)
 
 
-class VariationalDiffusionTerm[
-    VectorT: AbstractTangentVector,
-    CovectorT: AbstractCotangentVector,
-    Control,
-](AbstractTerm[CovectorT, Control]):
-    vector_field: Callable[[RealScalarLike, VectorT, Args, Control], CovectorT]
+class VariationalDiffusionTerm(AbstractTerm[_CV, Control]):
+    vector_field: Callable[[RealScalarLike, _V, Args, Control], _CV]
     control: Control
 
-    def vf(
-        self, t: RealScalarLike, y: VectorT, args: Args, control: Control = 0.0
-    ) -> CovectorT:
+    def vf(self, t: RealScalarLike, y: _V, args: Args, control: Control = 0.0) -> _CV:
         return self.vector_field(t, y, args, control)
 
     def contr(self, t0: RealScalarLike, t1: RealScalarLike, **kwargs) -> Control:
-        return self.control.evaluate(t0, t1, **kwargs)  # type: ignore
+        return self.control.evaluate(t0, t1, **kwargs)
 
-    def prod(self, vf: CovectorT, control: RealScalarLike) -> VectorT:  # type: ignore
+    def prod(self, vf: _CV, control: RealScalarLike) -> _V:
         raise NotImplementedError
 
-    def vf_prod(
-        self, t: RealScalarLike, y: VectorT, args: Args, control: Control
-    ) -> CovectorT:
+    def vf_prod(self, t: RealScalarLike, y: _V, args: Args, control: Control) -> _CV:
         return self.vf(t, y, args, control)

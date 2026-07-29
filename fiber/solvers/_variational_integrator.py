@@ -41,6 +41,8 @@ from ._term import ImplicitVariationalTerm, VariationalDiffusionTerm
 type _ErrorEstimate = None
 type _SolverState = None
 type _Terms = MultiTerm[tuple[ImplicitVariationalTerm, VariationalDiffusionTerm]]
+type _V = AbstractTangentVector
+type _CV = AbstractCotangentVector
 
 
 def _implicit_relation(v: Array, solver_args: Args) -> Array:
@@ -50,9 +52,7 @@ def _implicit_relation(v: Array, solver_args: Args) -> Array:
     return diff.value
 
 
-class LieSVI[VectorT: AbstractTangentVector, CovectorT: AbstractCotangentVector](
-    AbstractImplicitSolver, AbstractStratonovichSolver
-):
+class LieSVI(AbstractImplicitSolver, AbstractStratonovichSolver):
     term_structure: ClassVar = _Terms
     interpolation_cls: ClassVar[Callable[..., LocalInterpolation]] = LocalInterpolation
     root_finder: AbstractRootFinder = optx.Chord(rtol=1e-3, atol=1e-4)  # type: ignore
@@ -71,7 +71,7 @@ class LieSVI[VectorT: AbstractTangentVector, CovectorT: AbstractCotangentVector]
         terms: _Terms,
         t0: RealScalarLike,
         t1: RealScalarLike,
-        y0: VectorT,
+        y0: _V,
         args: Args,
     ) -> _SolverState:
         del terms, t0, t1, y0, args
@@ -82,11 +82,11 @@ class LieSVI[VectorT: AbstractTangentVector, CovectorT: AbstractCotangentVector]
         terms: _Terms,
         t0: RealScalarLike,
         t1: RealScalarLike,
-        y0: VectorT,
+        y0: _V,
         args: Args,
         solver_state: _SolverState,
         made_jump: BoolScalarLike,
-    ) -> tuple[VectorT, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
+    ) -> tuple[_V, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
         drift, diffusion = jtu.tree_map(lambda t: cast(WrapTerm, t), terms.terms)
 
         dt = drift.contr(t0, t1)
@@ -121,7 +121,7 @@ class LieSVI[VectorT: AbstractTangentVector, CovectorT: AbstractCotangentVector]
         self,
         terms: _Terms,
         t0: RealScalarLike,
-        y0: VectorT,
+        y0: _V,
         args: Args,
-    ) -> CovectorT:
+    ) -> _CV:
         raise NotImplementedError

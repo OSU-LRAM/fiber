@@ -79,11 +79,11 @@ class EulerHeun[VectorT: AbstractTangentVector, CovectorT: AbstractCotangentVect
 
         f0 = drift.vf_prod(t0, y0, args, dt)
         h0 = diffusion.prod(diffusion.vf(t0, y0, args), dw)
-        h0 = drift.term.cometric(y0, h0)  # type: ignore
+        h0 = drift.term.dual_metric(y0, h0)  # type: ignore
 
         y_prime = y0 + h0
         h_prime = diffusion.vf_prod(t0, y_prime, args, dw)
-        h_prime = drift.term.cometric(y_prime, h_prime)  # type: ignore
+        h_prime = drift.term.dual_metric(y_prime, h_prime)  # type: ignore
 
         vf = f0 + 0.5 * (h0 + h_prime)
         y1 = y0 + vf

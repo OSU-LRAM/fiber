@@ -1,9 +1,9 @@
 # fiber
 
 fiber is a JAX library for Lie group operations, targeting robotics
-applications. It provides support for `SO(2)`, `SE(2)`, `SO(3)`, and `SE(3)`
-along with the differential-geometric operators needed to work with them (e.g.,
-`expm`, `logm`, `dexp`, etc.).
+applications. It provides support for SO(2), SE(2), SO(3), and SE(3) along with
+the differential-geometric operators needed to work with them (e.g., `expm`,
+`logm`, `dexp`, etc.).
 
 ## Main Features
 

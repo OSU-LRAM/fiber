@@ -7,8 +7,8 @@ the differential-geometric operators needed to work with them (e.g., `expm`,
 
 ## Main Features
 
-- Rigid-body transformations and Lie algebra operations for `SO(2)`, `SE(2)`,
-  `SO(3)`, and `SE(3)`
+- Rigid-body transformations and Lie algebra operations for SO(2), SE(2),
+  SO(3), and SE(3)
 - A consistent set of differential-geometric operators (exponential/log maps,
   adjoint actions, and more) for building controllers, estimators, and
   planners that respect the geometry of a robot's configuration space

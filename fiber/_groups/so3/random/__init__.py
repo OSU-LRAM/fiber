@@ -18,7 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from ._isometry import Isometry, is_group_element
-from ._twist import Twist, is_algebra_element
+from ._gaussian import cov, gaussian, mean, normal
 
-__all__ = ["Isometry", "is_group_element", "Twist", "is_algebra_element"]
+__all__ = ["cov", "gaussian", "mean", "normal"]

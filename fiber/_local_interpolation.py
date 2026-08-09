@@ -1,0 +1,86 @@
+# Copyright 2026, Evan Palmer
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+from typing import cast
+
+import equinox as eqx
+import jax
+import jax.numpy as jnp
+from diffrax import AbstractLocalInterpolation
+from jaxtyping import Array
+
+from ._custom_types import RealScalarLike
+from ._groups._element import AbstractGroupElement, AbstractTangentVector
+from ._interpolation import left_glerp, lerp
+from ._operations import expm, rminus
+
+
+def linear_rescale(t0, t, t1) -> Array:
+    cond = t0 == t1
+    numerator = cast(Array, jnp.where(cond, 0, t - t0))
+    denominator = cast(Array, jnp.where(cond, 1, t1 - t0))
+    return numerator / denominator
+
+
+class LocalGeodesicInterpolation[GroupT: AbstractGroupElement](
+    AbstractLocalInterpolation
+):
+    t0: RealScalarLike  # type: ignore[reportIncompatibleVariableOverride]
+    t1: RealScalarLike  # type: ignore[reportIncompatibleVariableOverride]
+    y0: GroupT
+    y1: GroupT
+
+    def evaluate(
+        self, t0: RealScalarLike, t1: RealScalarLike | None = None, left: bool = True
+    ) -> GroupT:
+        del left
+        with jax.numpy_dtype_promotion("standard"):
+            if t1 is None:
+                coeff = linear_rescale(self.t0, t0, self.t1)
+                return left_glerp(self.y0, self.y1, coeff)
+            else:
+                coeff = (t1 - t0) / (self.t1 - self.t0)
+                incr = expm(coeff * rminus(self.y1, self.y0))  # type: ignore
+                return cast(GroupT, incr)
+
+
+class LocalLeftBundleInterpolation[VectorT: AbstractTangentVector](
+    AbstractLocalInterpolation
+):
+    t0: RealScalarLike  # type: ignore[reportIncompatibleVariableOverride]
+    t1: RealScalarLike  # type: ignore[reportIncompatibleVariableOverride]
+    y0: VectorT
+    y1: VectorT
+
+    def evaluate(
+        self, t0: RealScalarLike, t1: RealScalarLike | None = None, left: bool = True
+    ) -> VectorT:
+        del left
+        with jax.numpy_dtype_promotion("standard"):
+            if t1 is None:
+                coeff = linear_rescale(self.t0, t0, self.t1)
+                g_prime = left_glerp(self.y0.point, self.y1.point, coeff)
+                w_prime = lerp(self.y0, self.y1, coeff)
+            else:
+                coeff = (t1 - t0) / (self.t1 - self.t0)
+                g_prime = expm(coeff * rminus(self.y1.point, self.y0.point))
+                w_prime = coeff * (self.y1 - self.y0)  # type: ignore
+
+            return eqx.tree_at(lambda w: w.point.value, w_prime, g_prime.value)

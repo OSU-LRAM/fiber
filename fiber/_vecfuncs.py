@@ -18,9 +18,41 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import jax
-import jax.numpy as jnp
+import functools
+from collections.abc import Sequence
 
-EPSILON = (
-    jnp.finfo(jnp.float64).eps if jax.enable_x64.value else jnp.finfo(jnp.float32).eps
-)
+import jax.numpy as jnp
+from jaxtyping import Array, ArrayLike
+
+from ._custom_types import RealScalarLike
+from ._epsilon import EPSILON
+
+type Axis = None | int | Sequence[int]
+
+
+def softnorm(g: ArrayLike, axis: Axis = None) -> ArrayLike:
+    return jnp.sqrt(jnp.sum(g**2, axis=axis) + EPSILON)
+
+
+def softclip(g: ArrayLike, min: ArrayLike, max: ArrayLike) -> ArrayLike:
+    return jnp.clip(g, min + EPSILON, max - EPSILON)
+
+
+@functools.partial(jnp.vectorize, signature="(n)->(m,m)")
+def skew3(x: Array) -> Array:
+    return jnp.array([[0, -x[2], x[1]], [x[2], 0, -x[0]], [-x[1], x[0], 0]])
+
+
+@functools.partial(jnp.vectorize, signature="()->(m,m)")
+def skew2(x: RealScalarLike) -> Array:
+    return jnp.array([[0, -x], [x, 0]])
+
+
+@functools.partial(jnp.vectorize, signature="(n,n)->(m)")
+def vex3(x: Array) -> Array:
+    return jnp.array([x[2, 1], x[0, 2], x[1, 0]])
+
+
+@functools.partial(jnp.vectorize, signature="(n,n)->()")
+def vex2(x: Array) -> RealScalarLike:
+    return x[1, 0]

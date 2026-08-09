@@ -19,34 +19,52 @@
 # THE SOFTWARE.
 
 from collections.abc import Callable
-from typing import ClassVar
+from typing import ClassVar, cast
 
-import equinox as eqx
-from diffrax import RESULTS, AbstractStratonovichSolver, AbstractTerm, MultiTerm
+import jax.tree_util as jtu
+import optimistix as optx
+from diffrax import (
+    RESULTS,
+    AbstractImplicitSolver,
+    AbstractStratonovichSolver,
+    MultiTerm,
+)
+from diffrax._term import WrapTerm
+from jaxtyping import Array
+from optimistix import AbstractRootFinder
 
-from .._custom_types import VF, Args, BoolScalarLike, DenseInfo, RealScalarLike
-from .._groups import AbstractTangentVector
+from .._custom_types import Args, BoolScalarLike, DenseInfo, RealScalarLike
+from .._groups._element import AbstractCotangentVector, AbstractTangentVector
 from .._local_interpolation import LocalLeftBundleInterpolation as LocalInterpolation
-from .._operations import rplus
-from ._term import SharpTerm
+from ._term import ImplicitVariationalTerm, VariationalDiffusionTerm
 
 type _ErrorEstimate = None
 type _SolverState = None
-type _Terms = MultiTerm[tuple[SharpTerm, AbstractTerm]]
+type _Terms = MultiTerm[tuple[ImplicitVariationalTerm, VariationalDiffusionTerm]]
 type _V = AbstractTangentVector
+type _CV = AbstractCotangentVector
 
 
-class EulerHeun(AbstractStratonovichSolver):
+def _implicit_relation(v: Array, solver_args: Args) -> Array:
+    implicit_step, y_prime, t1, vector_cls, integrator_args, dt = solver_args
+    y = vector_cls.from_vector(v, point=y_prime.point)
+    diff = implicit_step(t1, y, integrator_args, dt) - y_prime
+    return diff.value
+
+
+class LieSVI(AbstractImplicitSolver, AbstractStratonovichSolver):
     term_structure: ClassVar = _Terms
     interpolation_cls: ClassVar[Callable[..., LocalInterpolation]] = LocalInterpolation
+    root_finder: AbstractRootFinder = optx.Chord(rtol=1e-3, atol=1e-4)  # type: ignore
+    root_find_max_steps: int = 10  # type: ignore
 
     def order(self, terms):
         del terms
         return 1
 
-    def strong_order(self, terms):
+    def error_order(self, terms):
         del terms
-        return 0.5
+        return 2
 
     def init(
         self,
@@ -69,32 +87,41 @@ class EulerHeun(AbstractStratonovichSolver):
         solver_state: _SolverState,
         made_jump: BoolScalarLike,
     ) -> tuple[_V, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
-        del solver_state, made_jump
+        drift, diffusion = jtu.tree_map(lambda t: cast(WrapTerm, t), terms.terms)
 
-        drift, diffusion = terms.terms
         dt = drift.contr(t0, t1)
         dw = diffusion.contr(t0, t1)
 
         f0 = drift.vf_prod(t0, y0, args, dt)
-        h0 = diffusion.prod(diffusion.vf(t0, y0, args), dw)
-        h0 = drift.term.dual_metric(y0, h0)  # type: ignore
+        h0 = diffusion.vf_prod(t0, y0, args, dw)
+        k0 = f0 + h0
 
-        y_prime = y0 + h0
-        h_prime = diffusion.vf_prod(t0, y_prime, args, dw)
-        h_prime = drift.term.dual_metric(y_prime, h_prime)  # type: ignore
+        t = t1 * drift.direction
+        implicit_step = drift.term.relation
 
-        vf = f0 + 0.5 * (h0 + h_prime)
-        y1 = y0 + vf
-        y1 = eqx.tree_at(lambda w: w.point.value, y1, rplus(y0.point, f0).value)
+        solver_args = (implicit_step, k0, t, type(y0), args, dt)
+        nonlinear_sol = optx.root_find(
+            _implicit_relation,
+            self.root_finder,
+            y0.as_vector(),
+            solver_args,
+            throw=False,
+            max_steps=self.root_find_max_steps,
+        )
+        k1 = nonlinear_sol.value
 
+        y1 = type(y0).from_vector(k1, point=k0.point)
         dense_info = {"y0": y0, "y1": y1}
-        return y1, None, dense_info, None, RESULTS.successful
+        solver_state = None
+        result = RESULTS.promote(nonlinear_sol.result)
+
+        return y1, None, dense_info, solver_state, result
 
     def func(
         self,
         terms: _Terms,
         t0: RealScalarLike,
-        y0: AbstractTangentVector,
+        y0: _V,
         args: Args,
-    ) -> VF:
-        return terms.vf(t0, y0, args)
+    ) -> _CV:
+        raise NotImplementedError

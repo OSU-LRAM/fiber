@@ -18,9 +18,61 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import jax
-import jax.numpy as jnp
-
-EPSILON = (
-    jnp.finfo(jnp.float64).eps if jax.enable_x64.value else jnp.finfo(jnp.float32).eps
+from . import numpy, random
+from ._element import Moment3d, Rotation3d, Spin3d
+from ._operations import (
+    Adj,
+    Adj_inv,
+    Adj_inv_op,
+    Adj_op,
+    adj,
+    adj_op,
+    dAdj,
+    dadj,
+    dAdj_inv,
+    dadj_inv,
+    dAdj_inv_op,
+    dadj_inv_op,
+    dAdj_op,
+    dadj_op,
+    dexpm,
+    dlogm,
+    expm,
+    inv,
+    lminus,
+    logm,
+    lplus,
+    rminus,
+    rplus,
 )
+
+__all__ = [
+    "Adj",
+    "Adj_inv",
+    "Adj_inv_op",
+    "Adj_op",
+    "Moment3d",
+    "Rotation3d",
+    "Spin3d",
+    "adj",
+    "adj_op",
+    "dAdj",
+    "dAdj_inv",
+    "dAdj_inv_op",
+    "dAdj_op",
+    "dadj",
+    "dadj_inv",
+    "dadj_inv_op",
+    "dadj_op",
+    "dexpm",
+    "dlogm",
+    "expm",
+    "inv",
+    "lminus",
+    "logm",
+    "lplus",
+    "numpy",
+    "random",
+    "rminus",
+    "rplus",
+]

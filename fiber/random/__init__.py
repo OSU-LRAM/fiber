@@ -18,6 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from ._gaussian import check_mean, cov, left_gaussian, mean, right_gaussian
+from ._gaussian import cov, gaussian, mean
 
-__all__ = ["left_gaussian", "right_gaussian", "check_mean", "mean", "cov"]
+__all__ = ["cov", "gaussian", "mean"]

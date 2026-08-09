@@ -18,36 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import functools
-from functools import singledispatch
+from ._gaussian import cov, gaussian, mean, normal
 
-import jax.numpy as jnp
-from jaxtyping import Array
-
-from ._elements import Isometry, Twist
-
-
-def split_state(x: Array, axis: int = 0) -> tuple[Isometry, Twist]:
-    g, v = jnp.split(x, (Isometry.size,), axis=axis)  # type: ignore
-    return Isometry.unflatten(g), Twist.from_vector(v)
-
-
-@singledispatch
-def join_state(g, v):
-    return _join_state(g, v)
-
-
-@functools.partial(jnp.vectorize, signature="(n),(m)->(k)")
-def _join_state(g: Array, v: Array) -> Array:
-    return jnp.concatenate([g, v])
-
-
-@join_state.register
-def _(g: Isometry, v: Twist) -> Array:
-    return _join_state(g.flatten(), v.as_vector())
-
-
-@join_state.register
-def _(g: Twist, v: Twist) -> Array:
-    # this is a special case that shows up in integrators
-    return _join_state(g.flatten(), v.as_vector())
+__all__ = ["cov", "gaussian", "mean", "normal"]

@@ -20,6 +20,14 @@
 
 from ._euler import LieEuler
 from ._euler_heun import EulerHeun
-from ._euler_maruyama import EulerMaruyama
+from ._term import ImplicitVariationalTerm, SharpTerm, VariationalDiffusionTerm
+from ._variational_integrator import LieSVI
 
-__all__ = ["LieEuler", "EulerHeun", "EulerMaruyama"]
+__all__ = [
+    "EulerHeun",
+    "ImplicitVariationalTerm",
+    "LieEuler",
+    "LieSVI",
+    "SharpTerm",
+    "VariationalDiffusionTerm",
+]

@@ -18,22 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from ._global_interpolation import (
-    GeodesicInterpolation,
-    PartitionedGeodesicInterpolation,
-)
-from ._local_interpolation import (
-    LocalDirectInterpolation,
-    LocalGeodesicInterpolation,
-    LocalPartitionedDirectInterpolation,
-    LocalPartitionedGeodesicInterpolation,
-)
+from ._gaussian import cov, gaussian, mean, normal
 
-__all__ = [
-    "GeodesicInterpolation",
-    "PartitionedGeodesicInterpolation",
-    "LocalDirectInterpolation",
-    "LocalGeodesicInterpolation",
-    "LocalPartitionedDirectInterpolation",
-    "LocalPartitionedGeodesicInterpolation",
-]
+__all__ = ["cov", "gaussian", "mean", "normal"]

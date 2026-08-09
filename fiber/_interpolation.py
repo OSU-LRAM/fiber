@@ -18,9 +18,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import jax
-import jax.numpy as jnp
+from ._custom_types import RealScalarLike
+from ._operations import expm, rminus
 
-EPSILON = (
-    jnp.finfo(jnp.float64).eps if jax.enable_x64.value else jnp.finfo(jnp.float32).eps
-)
+
+def lerp(y0, y1, coeff: RealScalarLike):
+    return y0 + coeff * (y1 - y0)
+
+
+def left_glerp(y0, y1, coeff: RealScalarLike):
+    return y0 @ expm(coeff * rminus(y1, y0))

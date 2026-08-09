@@ -18,9 +18,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import jax
-import jax.numpy as jnp
+from .._groups.se2 import numpy as se2
+from .._groups.se3 import numpy as se3
+from .._groups.so2 import numpy as so2
+from .._groups.so3 import numpy as so3
+from .._vecfuncs import skew2, skew3, softclip, softnorm, vex2, vex3
 
-EPSILON = (
-    jnp.finfo(jnp.float64).eps if jax.enable_x64.value else jnp.finfo(jnp.float32).eps
-)
+__all__ = [
+    "se2",
+    "se3",
+    "skew2",
+    "skew3",
+    "so2",
+    "so3",
+    "softclip",
+    "softnorm",
+    "vex2",
+    "vex3",
+]

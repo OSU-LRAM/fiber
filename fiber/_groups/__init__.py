@@ -18,9 +18,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import jax
-import jax.numpy as jnp
-
-EPSILON = (
-    jnp.finfo(jnp.float64).eps if jax.enable_x64.value else jnp.finfo(jnp.float32).eps
+from . import se2, se3, so2, so3
+from ._element import (
+    AbstractCotangentVector,
+    AbstractGroupElement,
+    AbstractTangentVector,
 )
+
+__all__ = [
+    "AbstractCotangentVector",
+    "AbstractGroupElement",
+    "AbstractTangentVector",
+    "se2",
+    "se3",
+    "so2",
+    "so3",
+]

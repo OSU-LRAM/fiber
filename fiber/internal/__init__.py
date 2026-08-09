@@ -29,17 +29,15 @@ from .._custom_types import (
     IntScalarLike,
     RealScalarLike,
 )
-from .._epsilon import ε
 
 __all__ = [
+    "VF",
+    "Args",
     "ArrayLike",
     "BoolScalarLike",
+    "Control",
+    "DenseInfo",
     "FloatScalarLike",
     "IntScalarLike",
     "RealScalarLike",
-    "ε",
-    "VF",
-    "Control",
-    "Args",
-    "DenseInfo",
 ]

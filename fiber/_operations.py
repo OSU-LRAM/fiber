@@ -18,498 +18,574 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import functools
-from functools import singledispatch
+from collections.abc import Sequence
 
-import jax
-import jax.numpy as jnp
 from jaxtyping import Array
+from plum import dispatch
 
-from ._elements import Isometry, Twist
-from .linalg import skew3, softclip, softnorm, vex3
+from ._custom_types import RealScalarLike
+from ._groups import se2, se3, so2, so3
+from ._groups._element import (
+    AbstractCotangentVector,
+    AbstractGroupElement,
+    AbstractTangentVector,
+)
+from ._groups.se2 import Isometry2d, Twist2d, Wrench2d
+from ._groups.se3 import Isometry3d, Twist3d, Wrench3d
+from ._groups.so2 import Moment2d, Rotation2d, Spin2d
+from ._groups.so3 import Moment3d, Rotation3d, Spin3d
 
 
-@singledispatch
-def inv(g):
-    return _inv(g)
+@dispatch
+def inv(w: Rotation2d) -> Rotation2d:  # type: ignore[reportRedeclaration]
+    return Rotation2d.from_matrix(so2.inv(w.value))
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
-def _inv(g: Array) -> Array:
-    return jnp.linalg.inv(g)
+@dispatch
+def inv(w: Rotation3d) -> Rotation3d:  # type: ignore[reportRedeclaration]
+    return Rotation3d.from_matrix(so3.inv(w.value))
 
 
-@inv.register
-def _inv_type(g: Isometry) -> Isometry:
-    return Isometry.from_matrix(_inv(g.coordinates))
+@dispatch
+def inv(w: Isometry2d) -> Isometry2d:  # type: ignore[reportRedeclaration]
+    return Isometry2d.from_matrix(se2.inv(w.value))
 
 
-@singledispatch
-def adj(g, h):
-    return _adj(g, h)
+@dispatch
+def inv(w: Isometry3d) -> Isometry3d:
+    return Isometry3d.from_matrix(se3.inv(w.value))
 
 
-@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
-def _adj(g: Array, h: Array) -> Array:
-    return g @ h - h @ g
+@dispatch
+def adj(w: Spin2d, v: Spin2d) -> Spin2d:  # type: ignore[reportRedeclaration]
+    return Spin2d.from_matrix(so2.adj(w.value, v.value))
 
 
-@adj.register
-def _adj_type(g: Twist, h: Twist) -> Twist:
-    return Twist.from_matrix(_adj(g.coordinates, h.coordinates))
+@dispatch
+def adj(w: Spin3d, v: Spin3d) -> Spin3d:  # type: ignore[reportRedeclaration]
+    return Spin3d.from_matrix(so3.adj(w.value, v.value))
 
 
-@singledispatch
-def adj_op(g):
-    return _adj_op(g)
+@dispatch
+def adj(w: Twist2d, v: Twist2d) -> Twist2d:  # type: ignore[reportRedeclaration]
+    return Twist2d.from_matrix(se2.adj(w.value, v.value))
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
-def _adj_op(g: Array) -> Array:
-    v, w = g[:3, 3], g[:3, :3]
-    return jnp.block([[w, skew3(v)], [jnp.zeros((3, 3)), w]])
+@dispatch
+def adj(w: Twist3d, v: Twist3d) -> Twist3d:  # type: ignore[reportRedeclaration]
+    return Twist3d.from_matrix(se3.adj(w.value, v.value))
 
 
-@adj_op.register
-def _adj_op_type(g: Twist) -> Array:
-    return _adj_op(g.coordinates)
+@dispatch
+def adj_op(w: Spin2d) -> Array:  # type: ignore[reportRedeclaration]
+    return so2.adj_op(w.value)
 
 
-@singledispatch
-def dadj(g, p):
-    return _dadj(g, p)
+@dispatch
+def adj_op(w: Spin3d) -> Array:  # type: ignore[reportRedeclaration]
+    return so3.adj_op(w.value)
 
 
-@functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
-def _dadj(g: Array, p: Array) -> Array:
-    return _dadj_op(g) @ p
+@dispatch
+def adj_op(w: Twist2d) -> Array:  # type: ignore[reportRedeclaration]
+    return se2.adj_op(w.value)
 
 
-@dadj.register
-def _dadj_type(g: Twist, p: Array) -> Array:
-    return _dadj(g.coordinates, p)
+@dispatch
+def adj_op(w: Twist3d) -> Array:  # type: ignore[reportRedeclaration]
+    return se3.adj_op(w.value)
 
 
-@singledispatch
-def dadj_op(g):
-    return _dadj_op(g)
+@dispatch
+def dadj(w: Spin2d, p: Moment2d) -> Moment2d:  # type: ignore[reportRedeclaration]
+    return Moment2d.from_vector(so2.dadj(w.value, p.value))
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
-def _dadj_op(g: Array) -> Array:
-    return -_adj_op(g).T
+@dispatch
+def dadj(w: Spin3d, p: Moment3d) -> Moment3d:  # type: ignore[reportRedeclaration]
+    return Moment3d.from_vector(so3.dadj(w.value, p.value))
 
 
-@dadj_op.register
-def _dadj_op_type(g: Twist) -> Array:
-    return _dadj_op(g.coordinates)
+@dispatch
+def dadj(w: Twist2d, p: Wrench2d) -> Wrench2d:  # type: ignore[reportRedeclaration]
+    return Wrench2d.from_vector(se2.dadj(w.value, p.value))
 
 
-@singledispatch
-def dadj_inv(g, p):
-    return _dadj_inv(g, p)
+@dispatch
+def dadj(w: Twist3d, p: Wrench3d) -> Wrench3d:  # type: ignore[reportRedeclaration]
+    return Wrench3d.from_vector(se3.dadj(w.value, p.value))
 
 
-@functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
-def _dadj_inv(g: Array, p: Array) -> Array:
-    return -_dadj(g, p)
+@dispatch
+def dadj_op(w: Spin2d) -> Array:  # type: ignore[reportRedeclaration]
+    return so2.dadj_op(w.value)
 
 
-@dadj_inv.register
-def _dadj_inv_type(g: Twist, p: Array) -> Array:
-    return _dadj_inv(g.coordinates, p)
+@dispatch
+def dadj_op(w: Spin3d) -> Array:  # type: ignore[reportRedeclaration]
+    return so3.dadj_op(w.value)
 
 
-@singledispatch
-def dadj_inv_op(g):
-    return _dadj_inv_op(g)
+@dispatch
+def dadj_op(w: Twist2d) -> Array:  # type: ignore[reportRedeclaration]
+    return se2.dadj_op(w.value)
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
-def _dadj_inv_op(g: Array) -> Array:
-    return -dadj_op(g)
+@dispatch
+def dadj_op(w: Twist3d) -> Array:  # type: ignore[reportRedeclaration]
+    return se3.dadj_op(w.value)
 
 
-@dadj_inv_op.register
-def _dadj_inv_op_type(g: Twist) -> Array:
-    return _dadj_inv_op(g.coordinates)
+@dispatch
+def dadj_inv(w: Spin2d, p: Moment2d) -> Moment2d:  # type: ignore[reportRedeclaration]
+    return Moment2d.from_vector(so2.dadj_inv(w.value, p.value))
 
 
-@singledispatch
-def Adj(g, h):
-    return _Adj(g, h)
+@dispatch
+def dadj_inv(w: Spin3d, p: Moment3d) -> Moment3d:  # type: ignore[reportRedeclaration]
+    return Moment3d.from_vector(so3.dadj_inv(w.value, p.value))
 
 
-@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
-def _Adj(g: Array, h: Array) -> Array:
-    return g @ h @ jnp.linalg.inv(g)
+@dispatch
+def dadj_inv(w: Twist2d, p: Wrench2d) -> Wrench2d:  # type: ignore[reportRedeclaration]
+    return Wrench2d.from_vector(se2.dadj_inv(w.value, p.value))
 
 
-@Adj.register
-def _Adj_type(g: Isometry, h: Twist) -> Twist:
-    return Twist.from_matrix(_Adj(g.coordinates, h.coordinates))
+@dispatch
+def dadj_inv(w: Twist3d, p: Wrench3d) -> Wrench3d:  # type: ignore[reportRedeclaration]
+    return Wrench3d.from_vector(se3.dadj_inv(w.value, p.value))
 
 
-@singledispatch
-def Adj_op(g):
-    return _Adj_op(g)
+@dispatch
+def dadj_inv_op(w: Spin2d) -> Array:  # type: ignore[reportRedeclaration]
+    return so2.dadj_inv_op(w.value)
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
-def _Adj_op(g: Array) -> Array:
-    p, rot = g[:3, 3], g[:3, :3]
-    return jnp.block([[rot, skew3(p) @ rot], [jnp.zeros_like(rot), rot]])
+@dispatch
+def dadj_inv_op(w: Spin3d) -> Array:  # type: ignore[reportRedeclaration]
+    return so3.dadj_inv_op(w.value)
 
 
-@Adj_op.register
-def _Adj_op_type(g: Isometry) -> Array:
-    return _Adj_op(g.coordinates)
+@dispatch
+def dadj_inv_op(w: Twist2d) -> Array:  # type: ignore[reportRedeclaration]
+    return se2.dadj_inv_op(w.value)
 
 
-@singledispatch
-def Adj_inv(g, h):
-    return _Adj_inv(g, h)
+@dispatch
+def dadj_inv_op(w: Twist3d) -> Array:  # type: ignore[reportRedeclaration]
+    return se3.dadj_inv_op(w.value)
 
 
-@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
-def _Adj_inv(g: Array, h: Array) -> Array:
-    return jnp.linalg.inv(g) @ h @ g
+@dispatch
+def Adj(g: Rotation2d, w: Spin2d) -> Spin2d:  # type: ignore[reportRedeclaration]
+    return Spin2d.from_matrix(so2.Adj(g.value, w.value))
 
 
-@Adj_inv.register
-def _Adj_inv_type(g: Isometry, h: Twist) -> Twist:
-    return Twist.from_matrix(_Adj_inv(g.coordinates, h.coordinates))
+@dispatch
+def Adj(g: Rotation3d, w: Spin3d) -> Spin3d:  # type: ignore[reportRedeclaration]
+    return Spin3d.from_matrix(so3.Adj(g.value, w.value))
 
 
-@singledispatch
-def Adj_inv_op(g):
-    return _Adj_inv_op(g)
+@dispatch
+def Adj(g: Isometry2d, w: Twist2d) -> Twist2d:  # type: ignore[reportRedeclaration]
+    return Twist2d.from_matrix(se2.Adj(g.value, w.value))
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
-def _Adj_inv_op(g: Array) -> Array:
-    return _Adj_op(jnp.linalg.inv(g))
+@dispatch
+def Adj(g: Isometry3d, w: Twist3d) -> Twist3d:  # type: ignore[reportRedeclaration]
+    return Twist3d.from_matrix(se3.Adj(g.value, w.value))
 
 
-@Adj_inv_op.register
-def _Adj_inv_op_type(g: Isometry) -> Array:
-    return _Adj_inv_op(g.coordinates)
+@dispatch
+def Adj_op(g: Rotation2d) -> Array:  # type: ignore[reportRedeclaration]
+    return so2.Adj_op(g.value)
 
 
-@singledispatch
-def dAdj(g, p):
-    return _dAdj(g, p)
+@dispatch
+def Adj_op(g: Rotation3d) -> Array:  # type: ignore[reportRedeclaration]
+    return so3.Adj_op(g.value)
 
 
-@functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
-def _dAdj(g: Array, p: Array) -> Array:
-    return _dAdj_op(g) @ p
+@dispatch
+def Adj_op(g: Isometry2d) -> Array:  # type: ignore[reportRedeclaration]
+    return se2.Adj_op(g.value)
 
 
-@dAdj.register
-def _dAdj_type(g: Isometry, p: Array) -> Array:
-    return _dAdj(g.coordinates, p)
+@dispatch
+def Adj_op(g: Isometry3d) -> Array:  # type: ignore[reportRedeclaration]
+    return se3.Adj_op(g.value)
 
 
-@singledispatch
-def dAdj_op(g):
-    return _dAdj_op(g)
+@dispatch
+def Adj_inv(g: Rotation2d, w: Spin2d) -> Spin2d:  # type: ignore[reportRedeclaration]
+    return Spin2d.from_matrix(so2.Adj_inv(g.value, w.value))
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
-def _dAdj_op(g: Array) -> Array:
-    return _Adj_op(jnp.linalg.inv(g)).T
+@dispatch
+def Adj_inv(g: Rotation3d, w: Spin3d) -> Spin3d:  # type: ignore[reportRedeclaration]
+    return Spin3d.from_matrix(so3.Adj_inv(g.value, w.value))
 
 
-@dAdj_op.register
-def _dAdj_op_type(g: Isometry) -> Array:
-    return _dAdj_op(g.coordinates)
+@dispatch
+def Adj_inv(g: Isometry2d, w: Twist2d) -> Twist2d:  # type: ignore[reportRedeclaration]
+    return Twist2d.from_matrix(se2.Adj_inv(g.value, w.value))
 
 
-@singledispatch
-def dAdj_inv(g, p):
-    return _dAdj_inv(g, p)
+@dispatch
+def Adj_inv(g: Isometry3d, w: Twist3d) -> Twist3d:  # type: ignore[reportRedeclaration]
+    return Twist3d.from_matrix(se3.Adj_inv(g.value, w.value))
 
 
-@functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
-def _dAdj_inv(g: Array, p: Array) -> Array:
-    return _dAdj_inv_op(g) @ p
+@dispatch
+def Adj_inv_op(g: Rotation2d) -> Array:  # type: ignore[reportRedeclaration]
+    return so2.Adj_inv_op(g.value)
 
 
-@dAdj_inv.register
-def _dAdj_inv_type(g: Isometry, p: Array) -> Array:
-    return _dAdj_inv(g.coordinates, p)
+@dispatch
+def Adj_inv_op(g: Rotation3d) -> Array:  # type: ignore[reportRedeclaration]
+    return so3.Adj_inv_op(g.value)
 
 
-@singledispatch
-def dAdj_inv_op(g):
-    return _dAdj_inv_op(g)
+@dispatch
+def Adj_inv_op(g: Isometry2d) -> Array:  # type: ignore[reportRedeclaration]
+    return se2.Adj_inv_op(g.value)
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
-def _dAdj_inv_op(g: Array) -> Array:
-    return _dAdj_op(jnp.linalg.inv(g))
+@dispatch
+def Adj_inv_op(g: Isometry3d) -> Array:  # type: ignore[reportRedeclaration]
+    return se3.Adj_inv_op(g.value)
 
 
-@dAdj_inv_op.register
-def _dAdj_inv_op_type(g: Isometry) -> Array:
-    return _dAdj_inv_op(g.coordinates)
+@dispatch
+def dAdj(g: Rotation2d, p: Moment2d) -> Moment2d:  # type: ignore[reportRedeclaration]
+    return Moment2d.from_vector(so2.dAdj(g.value, p.value))
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
-def _so3_expm(w: Array) -> Array:
-    theta = softnorm(vex3(w))
-    sin = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 1 - (theta**2 / 6) + (theta**4 / 120),
-        lambda: jnp.sin(theta) / theta,
-    )
-    cos = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 0.5 - (theta**2 / 24) + (theta**4 / 720),
-        lambda: (1 - jnp.cos(theta)) / (theta**2),
-    )
-    return jnp.eye(3) + sin * w + cos * (w @ w)
+@dispatch
+def dAdj(g: Rotation3d, p: Moment3d) -> Moment3d:  # type: ignore[reportRedeclaration]
+    return Moment3d.from_vector(so3.dAdj(g.value, p.value))
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
-def _so3_dexpm(w: Array) -> Array:
-    theta = softnorm(vex3(w))
-    a = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 1 - (theta**2 / 6) + (theta**4 / 120),
-        lambda: jnp.sin(theta) / theta,
-    )
-    b = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 0.5 - (theta**2 / 24) + (theta**4 / 720),
-        lambda: (1 - jnp.cos(theta)) / (theta**2),
-    )
-    c = (1 - a) / (theta**2)
-    return a * jnp.eye(3) + b * w + c * (w @ w)
+@dispatch
+def dAdj(g: Isometry2d, p: Wrench2d) -> Wrench2d:  # type: ignore[reportRedeclaration]
+    return Wrench2d.from_vector(se2.dAdj(g.value, p.value))
 
 
-@singledispatch
-def expm(g):
-    return _expm(g)
+@dispatch
+def dAdj(g: Isometry3d, p: Wrench3d) -> Wrench3d:  # type: ignore[reportRedeclaration]
+    return Wrench3d.from_vector(se3.dAdj(g.value, p.value))
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
-def _expm(g: Array) -> Array:
-    p, w_hat = g[:3, 3], g[:3, :3]
-    theta = softnorm(vex3(w_hat))
-    A = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 1 - (theta**2 / 6) + (theta**4 / 120),
-        lambda: jnp.sin(theta) / theta,
-    )
-    B = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 0.5 - (theta**2 / 24) + (theta**4 / 720),
-        lambda: (1 - jnp.cos(theta)) / (theta**2),
-    )
-    C = (1 - A) / theta**2
-    V = jnp.eye(3) + B * w_hat + C * (w_hat @ w_hat)
-    return jnp.block([[_so3_expm(w_hat), (V @ p).reshape(3, 1)], [jnp.zeros(3), 1]])
+@dispatch
+def dAdj_op(g: Rotation2d) -> Array:  # type: ignore[reportRedeclaration]
+    return so2.dAdj_op(g.value)
 
 
-@expm.register
-def _expm_type(g: Twist) -> Isometry:
-    return Isometry.from_matrix(_expm(g.coordinates))
+@dispatch
+def dAdj_op(g: Rotation3d) -> Array:  # type: ignore[reportRedeclaration]
+    return so3.dAdj_op(g.value)
 
 
-@singledispatch
-def dexpm(g):
-    return _dexpm(g)
+@dispatch
+def dAdj_op(g: Isometry2d) -> Array:  # type: ignore[reportRedeclaration]
+    return se2.dAdj_op(g.value)
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
-def _dexpm(g: Array) -> Array:
-    v, w_hat = g[:3, 3], g[:3, :3]
-    v_hat, w = skew3(v), vex3(w_hat)
-    theta = softnorm(w)
-    a = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 1 - (theta**2 / 6) + (theta**4 / 120),
-        lambda: jnp.sin(theta) / theta,
-    )
-    b = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 0.5 - (theta**2 / 24) + (theta**4 / 720),
-        lambda: (1 - jnp.cos(theta)) / (theta**2),
-    )
-    c = (1 - a) / (theta**2)
-    W = (
-        (c - b) * jnp.eye(3)
-        + ((a - 2 * b) / theta**2) * w_hat
-        + ((b - 3 * c) / theta**2) * (w_hat @ w_hat)
-    )
-    V = b * v_hat + c * (w @ v.T + v @ w.T) + (w.T @ v * W)
-    D = a * jnp.eye(3) + b * w_hat + c * (w_hat @ w_hat)
-    return jnp.block([[D, V], [jnp.zeros_like(V), D]])
+@dispatch
+def dAdj_op(g: Isometry3d) -> Array:  # type: ignore[reportRedeclaration]
+    return se3.dAdj_op(g.value)
 
 
-@dexpm.register
-def _dexpm_type(g: Twist) -> Array:
-    return _dexpm(g.coordinates)
+@dispatch
+def dAdj_inv(g: Rotation2d, p: Moment2d) -> Moment2d:  # type: ignore[reportRedeclaration]
+    return Moment2d.from_vector(so2.dAdj_inv(g.value, p.value))
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
-def _so3_logm(w: Array) -> Array:
-    cos = (jnp.trace(w) - 1) / 2
-    cos = softclip(cos, -1, 1)
-    theta = jnp.arccos(cos)
-    w_hat = jnp.zeros((3, 3))
-    return jax.lax.cond(
-        jnp.sin(theta) < 1e-6,
-        lambda: w_hat,
-        lambda: 0.5 * theta / jnp.sin(theta) * (w - w.T),
-    )
+@dispatch
+def dAdj_inv(g: Rotation3d, p: Moment3d) -> Moment3d:  # type: ignore[reportRedeclaration]
+    return Moment3d.from_vector(so3.dAdj_inv(g.value, p.value))
 
 
-@singledispatch
-def logm(g):
-    return _logm(g)
+@dispatch
+def dAdj_inv(g: Isometry2d, p: Wrench2d) -> Wrench2d:  # type: ignore[reportRedeclaration]
+    return Wrench2d.from_vector(se2.dAdj_inv(g.value, p.value))
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
-def _logm(g: Array) -> Array:
-    p, rot = g[:3, 3], g[:3, :3]
-    w_hat = _so3_logm(rot)
-    w = vex3(w_hat)
-    jac = jnp.eye(3)
-    V = jax.lax.cond(
-        jnp.isclose(softnorm(w), 0.0),
-        lambda: jac,
-        lambda: (
-            jac
-            - 0.5 * w_hat
-            + (
-                (1 / (softnorm(w) ** 2))
-                - (1 + jnp.cos(softnorm(w))) / (2 * softnorm(w) * jnp.sin(softnorm(w)))
-            )
-            * (w_hat @ w_hat)
-        ),
-    )
-    return jnp.block([[w_hat, (V @ p).reshape(3, 1)], [jnp.zeros(4)]])
+@dispatch
+def dAdj_inv(g: Isometry3d, p: Wrench3d) -> Wrench3d:  # type: ignore[reportRedeclaration]
+    return Wrench3d.from_vector(se3.dAdj_inv(g.value, p.value))
 
 
-@logm.register
-def _logm_type(g: Isometry) -> Twist:
-    return Twist.from_matrix(_logm(g.coordinates))
+@dispatch
+def dAdj_inv_op(g: Rotation2d) -> Array:  # type: ignore[reportRedeclaration]
+    return so2.dAdj_inv_op(g.value)
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
-def _so3_dlogm(w: Array) -> Array:
-    cos = (jnp.trace(w) - 1) / 2
-    cos = softclip(cos, -1, 1)
-    theta = jnp.arccos(cos)
-    a = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 1 - (theta**2 / 6) + (theta**4 / 120),
-        lambda: jnp.sin(theta) / theta,
-    )
-    b = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 0.5 - (theta**2 / 24) + (theta**4 / 720),
-        lambda: (1 - cos) / (theta**2),
-    )
-    e = (b - 0.5 * a) / (1 - cos)
-    return jnp.eye(3) - 0.5 * w + e * (w @ w)
+@dispatch
+def dAdj_inv_op(g: Rotation3d) -> Array:  # type: ignore[reportRedeclaration]
+    return so3.dAdj_inv_op(g.value)
 
 
-@singledispatch
-def dlogm(g):
-    return _dlogm(g)
+@dispatch
+def dAdj_inv_op(g: Isometry2d) -> Array:  # type: ignore[reportRedeclaration]
+    return se2.dAdj_inv_op(g.value)
 
 
-@functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
-def _dlogm(A: Array) -> Array:
-    v, w_hat = A[:3, 3], A[:3, :3]
-    v_hat, w = skew3(v), vex3(w_hat)
-    theta = softnorm(w)
-    a = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 1 - (theta**2 / 6) + (theta**4 / 120),
-        lambda: jnp.sin(theta) / theta,
-    )
-    b = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 0.5 - (theta**2 / 24) + (theta**4 / 720),
-        lambda: (1 - jnp.cos(theta)) / (theta**2),
-    )
-    c = (1 - a) / (theta**2)
-    W = (
-        (c - b) * jnp.eye(3)
-        + ((a - 2 * b) / theta**2) * w_hat
-        + ((b - 3 * c) / theta**2) * (w_hat @ w_hat)
-    )
-    B = b * v_hat + c * (w @ v.T + v @ w.T) + (w.T @ v) * W
-    e = (b - 0.5 * a) / (1 - jnp.cos(theta))
-    D = jnp.eye(3) - 0.5 * w_hat + e * (w_hat @ w_hat)
-    return jnp.block([[D, -D @ B @ D], [jnp.zeros_like(D), D]])
+@dispatch
+def dAdj_inv_op(g: Isometry3d) -> Array:  # type: ignore[reportRedeclaration]
+    return se3.dAdj_inv_op(g.value)
 
 
-@dlogm.register
-def _dlogm_type(g: Twist) -> Array:
-    return _dlogm(g.coordinates)
+@dispatch
+def expm(w: Spin2d) -> Rotation2d:  # type: ignore[reportRedeclaration]
+    return Rotation2d.from_matrix(so2.expm(w.value))
 
 
-@singledispatch
-def lplus(g, h):
-    return _lplus(g, h)
+@dispatch
+def expm(w: Spin3d) -> Rotation3d:  # type: ignore[reportRedeclaration]
+    return Rotation3d.from_matrix(so3.expm(w.value))
 
 
-@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
-def _lplus(g: Array, h: Array) -> Array:
-    return _expm(h) @ g
+@dispatch
+def expm(w: Twist2d) -> Isometry2d:  # type: ignore[reportRedeclaration]
+    return Isometry2d.from_matrix(se2.expm(w.value))
 
 
-@lplus.register
-def _lplus_type(g: Isometry, h: Twist) -> Isometry:
-    return Isometry.from_matrix(_lplus(g.coordinates, h.coordinates))
+@dispatch
+def expm(w: Twist3d) -> Isometry3d:  # type: ignore[reportRedeclaration]
+    return Isometry3d.from_matrix(se3.expm(w.value))
 
 
-@singledispatch
-def rplus(g, h):
-    return _rplus(g, h)
+@dispatch
+def dexpm(w: Spin2d) -> Array:  # type: ignore[reportRedeclaration]
+    return so2.dexpm(w.value)
 
 
-@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
-def _rplus(g: Array, h: Array) -> Array:
-    return g @ _expm(h)
+@dispatch
+def dexpm(w: Spin3d) -> Array:  # type: ignore[reportRedeclaration]
+    return so3.dexpm(w.value)
 
 
-@rplus.register
-def _rplus_type(g: Isometry, h: Twist) -> Isometry:
-    return Isometry.from_matrix(_rplus(g.coordinates, h.coordinates))
+@dispatch
+def dexpm(w: Twist2d) -> Array:  # type: ignore[reportRedeclaration]
+    return se2.dexpm(w.value)
 
 
-@singledispatch
-def lminus(g, h):
-    return _lminus(g, h)
+@dispatch
+def dexpm(w: Twist3d) -> Array:  # type: ignore[reportRedeclaration]
+    return se3.dexpm(w.value)
 
 
-@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
-def _lminus(g: Array, h: Array) -> Array:
-    return _logm(g @ jnp.linalg.inv(h))
+@dispatch
+def logm(g: Rotation2d) -> Spin2d:  # type: ignore[reportRedeclaration]
+    return Spin2d.from_matrix(so2.logm(g.value))
 
 
-@lminus.register
-def _lminus_type(g: Isometry, h: Isometry) -> Twist:
-    return Twist.from_matrix(_lminus(g.coordinates, h.coordinates))
+@dispatch
+def logm(g: Rotation3d) -> Spin3d:  # type: ignore[reportRedeclaration]
+    return Spin3d.from_matrix(so3.logm(g.value))
 
 
-@singledispatch
-def rminus(g, h):
-    return _rminus(g, h)
+@dispatch
+def logm(g: Isometry2d) -> Twist2d:  # type: ignore[reportRedeclaration]
+    return Twist2d.from_matrix(se2.logm(g.value))
 
 
-@functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
-def _rminus(g: Array, h: Array) -> Array:
-    return _logm(jnp.linalg.inv(h) @ g)
+@dispatch
+def logm(g: Isometry3d) -> Twist3d:  # type: ignore[reportRedeclaration]
+    return Twist3d.from_matrix(se3.logm(g.value))
 
 
-@rminus.register
-def _rminus_type(g: Isometry, h: Isometry) -> Twist:
-    return Twist.from_matrix(_rminus(g.coordinates, h.coordinates))
+@dispatch
+def dlogm(w: Spin2d) -> Array:  # type: ignore[reportRedeclaration]
+    return so2.dlogm(w.value)
+
+
+@dispatch
+def dlogm(w: Spin3d) -> Array:  # type: ignore[reportRedeclaration]
+    return so3.dlogm(w.value)
+
+
+@dispatch
+def dlogm(w: Twist2d) -> Array:  # type: ignore[reportRedeclaration]
+    return se2.dlogm(w.value)
+
+
+@dispatch
+def dlogm(w: Twist3d) -> Array:  # type: ignore[reportRedeclaration]
+    return se3.dlogm(w.value)
+
+
+@dispatch
+def lplus(g: Rotation2d, w: Spin2d) -> Rotation2d:  # type: ignore[reportRedeclaration]
+    return Rotation2d.from_matrix(so2.lplus(g.value, w.value))
+
+
+@dispatch
+def lplus(g: Rotation3d, w: Spin3d) -> Rotation3d:  # type: ignore[reportRedeclaration]
+    return Rotation3d.from_matrix(so3.lplus(g.value, w.value))
+
+
+@dispatch
+def lplus(g: Isometry2d, w: Twist2d) -> Isometry2d:  # type: ignore[reportRedeclaration]
+    return Isometry2d.from_matrix(se2.lplus(g.value, w.value))
+
+
+@dispatch
+def lplus(g: Isometry3d, w: Twist3d) -> Isometry3d:  # type: ignore[reportRedeclaration]
+    return Isometry3d.from_matrix(se3.lplus(g.value, w.value))
+
+
+@dispatch
+def rplus(g: Rotation2d, w: Spin2d) -> Rotation2d:  # type: ignore[reportRedeclaration]
+    return Rotation2d.from_matrix(so2.rplus(g.value, w.value))
+
+
+@dispatch
+def rplus(g: Rotation3d, w: Spin3d) -> Rotation3d:  # type: ignore[reportRedeclaration]
+    return Rotation3d.from_matrix(so3.rplus(g.value, w.value))
+
+
+@dispatch
+def rplus(g: Isometry2d, w: Twist2d) -> Isometry2d:  # type: ignore[reportRedeclaration]
+    return Isometry2d.from_matrix(se2.rplus(g.value, w.value))
+
+
+@dispatch
+def rplus(g: Isometry3d, w: Twist3d) -> Isometry3d:  # type: ignore[reportRedeclaration]
+    return Isometry3d.from_matrix(se3.rplus(g.value, w.value))
+
+
+@dispatch
+def lminus(g: Rotation2d, h: Rotation2d) -> Spin2d:  # type: ignore[reportRedeclaration]
+    return Spin2d.from_matrix(so2.lminus(g.value, h.value))
+
+
+@dispatch
+def lminus(g: Rotation3d, h: Rotation3d) -> Spin3d:  # type: ignore[reportRedeclaration]
+    return Spin3d.from_matrix(so3.lminus(g.value, h.value))
+
+
+@dispatch
+def lminus(g: Isometry2d, h: Isometry2d) -> Twist2d:  # type: ignore[reportRedeclaration]
+    return Twist2d.from_matrix(se2.lminus(g.value, h.value))
+
+
+@dispatch
+def lminus(g: Isometry3d, h: Isometry3d) -> Twist3d:  # type: ignore[reportRedeclaration]
+    return Twist3d.from_matrix(se3.lminus(g.value, h.value))
+
+
+@dispatch
+def rminus(g: Rotation2d, h: Rotation2d) -> Spin2d:  # type: ignore[reportRedeclaration]
+    return Spin2d.from_matrix(so2.rminus(g.value, h.value))
+
+
+@dispatch
+def rminus(g: Rotation3d, h: Rotation3d) -> Spin3d:  # type: ignore[reportRedeclaration]
+    return Spin3d.from_matrix(so3.rminus(g.value, h.value))
+
+
+@dispatch
+def rminus(g: Isometry2d, h: Isometry2d) -> Twist2d:  # type: ignore[reportRedeclaration]
+    return Twist2d.from_matrix(se2.rminus(g.value, h.value))
+
+
+@dispatch
+def rminus(g: Isometry3d, h: Isometry3d) -> Twist3d:  # type: ignore[reportRedeclaration]
+    return Twist3d.from_matrix(se3.rminus(g.value, h.value))
+
+
+@dispatch
+def shape(x: AbstractGroupElement):  # type: ignore[reportRedeclaration]
+    return x.shape
+
+
+@dispatch
+def shape(x: AbstractTangentVector):  # type: ignore[reportRedeclaration]
+    return x.shape
+
+
+@dispatch
+def shape(x: AbstractCotangentVector):  # type: ignore[reportRedeclaration]
+    return x.shape
+
+
+@dispatch
+def concatenate(elements: Sequence[Rotation2d]) -> Rotation2d:  # type: ignore[reportRedeclaration]
+    return Rotation2d.concatenate(elements)
+
+
+@dispatch
+def concatenate(elements: Sequence[Rotation3d]) -> Rotation3d:  # type: ignore[reportRedeclaration]
+    return Rotation3d.concatenate(elements)
+
+
+@dispatch
+def concatenate(elements: Sequence[Isometry2d]) -> Isometry2d:  # type: ignore[reportRedeclaration]
+    return Isometry2d.concatenate(elements)
+
+
+@dispatch
+def concatenate(elements: Sequence[Isometry3d]) -> Isometry3d:  # type: ignore[reportRedeclaration]
+    return Isometry3d.concatenate(elements)
+
+
+@dispatch
+def concatenate(vectors: Sequence[Spin2d]) -> Spin2d:  # type: ignore[reportRedeclaration]
+    return Spin2d.concatenate(vectors)
+
+
+@dispatch
+def concatenate(vectors: Sequence[Spin3d]) -> Spin3d:  # type: ignore[reportRedeclaration]
+    return Spin3d.concatenate(vectors)
+
+
+@dispatch
+def concatenate(vectors: Sequence[Twist2d]) -> Twist2d:  # type: ignore[reportRedeclaration]
+    return Twist2d.concatenate(vectors)
+
+
+@dispatch
+def concatenate(vectors: Sequence[Twist3d]) -> Twist3d:  # type: ignore[reportRedeclaration]
+    return Twist3d.concatenate(vectors)
+
+
+@dispatch
+def concatenate(vectors: Sequence[Moment2d]) -> Moment2d:  # type: ignore[reportRedeclaration]
+    return Moment2d.concatenate(vectors)
+
+
+@dispatch
+def concatenate(vectors: Sequence[Moment3d]) -> Moment3d:  # type: ignore[reportRedeclaration]
+    return Moment3d.concatenate(vectors)
+
+
+@dispatch
+def concatenate(vectors: Sequence[Wrench2d]) -> Wrench2d:  # type: ignore[reportRedeclaration]
+    return Wrench2d.concatenate(vectors)
+
+
+@dispatch
+def concatenate(vectors: Sequence[Wrench3d]) -> Wrench3d:  # type: ignore[reportRedeclaration]
+    return Wrench3d.concatenate(vectors)
+
+
+@dispatch
+def pair(w: Moment2d, v: Spin2d) -> RealScalarLike:  # type: ignore[reportRedeclaration]
+    return w.pair(v)
+
+
+@dispatch
+def pair(w: Moment3d, v: Spin3d) -> RealScalarLike:  # type: ignore[reportRedeclaration]
+    return w.pair(v)
+
+
+@dispatch
+def pair(w: Wrench2d, v: Twist2d) -> RealScalarLike:  # type: ignore[reportRedeclaration]
+    return w.pair(v)
+
+
+@dispatch
+def pair(w: Wrench3d, v: Twist3d) -> RealScalarLike:  # type: ignore[reportRedeclaration]
+    return w.pair(v)

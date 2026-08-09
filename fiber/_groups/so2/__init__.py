@@ -18,36 +18,61 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import jax
-import jax.numpy as jnp
-from jax.scipy.spatial.transform import Rotation as R
-from jaxtyping import Array
+from . import numpy, random
+from ._element import Moment2d, Rotation2d, Spin2d
+from ._operations import (
+    Adj,
+    Adj_inv,
+    Adj_inv_op,
+    Adj_op,
+    adj,
+    adj_op,
+    dAdj,
+    dadj,
+    dAdj_inv,
+    dadj_inv,
+    dAdj_inv_op,
+    dadj_inv_op,
+    dAdj_op,
+    dadj_op,
+    dexpm,
+    dlogm,
+    expm,
+    inv,
+    lminus,
+    logm,
+    lplus,
+    rminus,
+    rplus,
+)
 
-from .._custom_types import RealScalarLike
-from .._elements._isometry import Isometry
-from .._operations import expm, rminus
-
-
-def lerp(y0: Array, y1: Array, coeff: RealScalarLike) -> Array:
-    return y0 + coeff * (y1 - y0)
-
-
-def slerp(y0: R, y1: R, coeff: RealScalarLike) -> R:
-    q0, q1 = y0.as_quat(), y1.as_quat()
-    dot = jnp.dot(q0, q1)
-
-    def lerp_quat():
-        return lerp(q0, q1, coeff)
-
-    def slerp_quat():
-        theta = jnp.acos(dot)
-        coeff0 = jnp.sin((1 - coeff) * theta) / jnp.sin(theta)
-        coeff1 = jnp.sin(coeff * theta) / jnp.sin(theta)
-        return coeff0 * q0 + coeff1 * q1
-
-    result = jax.lax.cond(jnp.isclose(dot, 1.0), lerp_quat, slerp_quat)
-    return R.from_quat(result)
-
-
-def glerp(y0: Isometry, y1: Isometry, coeff: RealScalarLike) -> Isometry:
-    return y0 @ expm(coeff * rminus(y1, y0))
+__all__ = [
+    "Adj",
+    "Adj_inv",
+    "Adj_inv_op",
+    "Adj_op",
+    "Moment2d",
+    "Rotation2d",
+    "Spin2d",
+    "adj",
+    "adj_op",
+    "dAdj",
+    "dAdj_inv",
+    "dAdj_inv_op",
+    "dAdj_op",
+    "dadj",
+    "dadj_inv",
+    "dadj_inv_op",
+    "dadj_op",
+    "dexpm",
+    "dlogm",
+    "expm",
+    "inv",
+    "lminus",
+    "logm",
+    "lplus",
+    "numpy",
+    "random",
+    "rminus",
+    "rplus",
+]

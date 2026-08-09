@@ -18,162 +18,138 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from functools import singledispatch
-from typing import Optional
+from collections.abc import Sequence
 
-import jax
 import jax.numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
+from plum import dispatch
 
-from .._custom_types import RealScalarLike
-from .._elements import Isometry, Twist
-from .._elements._twist import _as_vector, _from_vector
-from .._operations import expm, logm
-from ..linalg._vecfuncs import softnorm
-
-
-def _sample(num_samples: int, cov: Array, *, key: PRNGKeyArray) -> Array:
-    return jax.random.multivariate_normal(key, jnp.zeros(6), cov, (num_samples,))
+from .._groups import se2, se3, so2, so3
+from .._groups.se2 import Isometry2d, Twist2d
+from .._groups.se3 import Isometry3d, Twist3d
+from .._groups.so2 import Rotation2d, Spin2d
+from .._groups.so3 import Rotation3d, Spin3d
 
 
-@singledispatch
-def left_gaussian(
-    mean: Array, cov: Optional[Array] = None, num_samples: int = 1, *, key
-):
-    cov = cov if cov is not None else jnp.eye(6)
-    return _left_gaussian(mean, cov, num_samples, key=key)
-
-
-def _left_gaussian(
-    mean: Array,
+@dispatch
+def gaussian(  # type: ignore[reportRedeclaration]
+    key: PRNGKeyArray,
+    mean: Rotation2d,
     cov: Array,
-    num_samples: int,
-    *,
+    shape: Sequence[int] | None = None,
+    method: str = "cholesky",
+    left: bool = True,
+) -> tuple[Rotation2d, Spin2d]:
+    elements, vectors = so2.random.gaussian(key, mean.value, cov, shape, method, left)
+    point = Rotation2d(jnp.broadcast_to(mean.value, vectors.shape))
+    return Rotation2d.from_matrix(elements), Spin2d.from_matrix(vectors, point)
+
+
+@dispatch
+def gaussian(  # type: ignore[reportRedeclaration]
     key: PRNGKeyArray,
-) -> tuple[Array, Array]:
-    s = _sample(num_samples, cov, key=key)
-    vs = _from_vector(s)
-    gs = jax.vmap(lambda x: mean @ expm(x))(vs)
-    return gs, vs
+    mean: Rotation3d,
+    cov: Array,
+    shape: Sequence[int] | None = None,
+    method: str = "cholesky",
+    left: bool = True,
+) -> tuple[Rotation3d, Spin3d]:
+    elements, vectors = so3.random.gaussian(key, mean.value, cov, shape, method, left)
+    point = Rotation3d(jnp.broadcast_to(mean.value, vectors.shape))
+    return Rotation3d.from_matrix(elements), Spin3d.from_matrix(vectors, point)
 
 
-@left_gaussian.register  # type: ignore
-def _left_gaussian_type(
-    mean: Isometry,
-    cov: Optional[Array] = None,
-    num_samples: int = 1,
-    *,
+@dispatch
+def gaussian(  # type: ignore[reportRedeclaration]
     key: PRNGKeyArray,
-) -> tuple[Isometry, Twist]:
-    cov = cov if cov is not None else jnp.eye(6)
-    gs, vs = _left_gaussian(mean.coordinates, cov, num_samples, key=key)
-    return Isometry.from_matrix(gs), Twist.from_matrix(vs)
+    mean: Isometry2d,
+    cov: Array,
+    shape: Sequence[int] | None = None,
+    method: str = "cholesky",
+    left: bool = True,
+) -> tuple[Isometry2d, Twist2d]:
+    elements, vectors = se2.random.gaussian(key, mean.value, cov, shape, method, left)
+    point = Isometry2d(jnp.broadcast_to(mean.value, vectors.shape))
+    return Isometry2d.from_matrix(elements), Twist2d.from_matrix(vectors, point)
 
 
-@singledispatch
-def right_gaussian(
-    mean: Array, cov: Optional[Array] = None, num_samples: int = 1, *, key
-):
-    cov = cov if cov is not None else jnp.eye(6)
-    return _right_gaussian(mean, cov, num_samples, key=key)
-
-
-def _right_gaussian(
-    mean: Array, cov: Array, num_samples: int, *, key: PRNGKeyArray
-) -> tuple[Array, Array]:
-    s = _sample(num_samples, cov, key=key)
-    vs = _from_vector(s)
-    gs = jax.vmap(lambda x: expm(x) @ mean)(vs)
-    return gs, vs
-
-
-@right_gaussian.register  # type: ignore
-def _right_gaussian_type(
-    mean: Isometry,
-    cov: Optional[Array] = None,
-    num_samples: int = 1,
-    *,
+@dispatch
+def gaussian(  # type: ignore[reportRedeclaration]
     key: PRNGKeyArray,
-) -> tuple[Isometry, Twist]:
-    cov = cov if cov is not None else jnp.eye(6)
-    gs, vs = _right_gaussian(mean.coordinates, cov, num_samples, key=key)
-    return Isometry.from_matrix(gs), Twist.from_matrix(vs)
+    mean: Isometry3d,
+    cov: Array,
+    shape: Sequence[int] | None = None,
+    method: str = "cholesky",
+    left: bool = True,
+) -> tuple[Isometry3d, Twist3d]:
+    elements, vectors = se3.random.gaussian(key, mean.value, cov, shape, method, left)
+    point = Isometry3d(jnp.broadcast_to(mean.value, vectors.shape))
+    return Isometry3d.from_matrix(elements), Twist3d.from_matrix(vectors, point)
 
 
-@singledispatch
-def mean(samples, iters: int = 100):
-    return _mean(samples, iters)
+@dispatch
+def mean(  # type: ignore[reportRedeclaration]
+    samples: Rotation2d,
+    rtol: float = 1e-6,
+    atol=1e-6,
+    max_steps: int = 100,
+    throw: bool = True,
+) -> Rotation2d:
+    est_mean = so2.random.mean(samples.value, rtol, atol, max_steps, throw)
+    return Rotation2d.from_matrix(est_mean)
 
 
-def _mean(samples: Array, iters: int) -> Array:
-    def init_mean(carry, _):
-        mean, exp_mean = carry
-        return (mean @ expm(_from_vector(exp_mean)), exp_mean), None
-
-    exp_coords = jax.vmap(lambda g: _as_vector(logm(g)))(samples)
-    exp_mean = jnp.mean(exp_coords, axis=0)
-    (mean, _), _ = jax.lax.scan(init_mean, (jnp.eye(4), exp_mean), None, length=5)
-
-    def refine_mean(carry, _):
-        mean, gs = carry
-        exp_coords = jax.vmap(lambda g: _as_vector(logm(jnp.linalg.inv(mean) @ g)))(gs)
-        exp_mean = jnp.mean(exp_coords, axis=0)
-        return (mean @ expm(_from_vector(exp_mean)), gs), None
-
-    (mean, _), _ = jax.lax.scan(refine_mean, (mean, samples), None, length=iters)
-    return mean
+@dispatch
+def mean(  # type: ignore[reportRedeclaration]
+    samples: Rotation3d,
+    rtol: float = 1e-6,
+    atol=1e-6,
+    max_steps: int = 100,
+    throw: bool = True,
+) -> Rotation3d:
+    est_mean = so3.random.mean(samples.value, rtol, atol, max_steps, throw)
+    return Rotation3d.from_matrix(est_mean)
 
 
-@mean.register  # type: ignore
-def _mean_isometry_type(samples: Isometry, iters: int = 100) -> Isometry:
-    return Isometry.from_matrix(_mean(samples.coordinates, iters))
+@dispatch
+def mean(  # type: ignore[reportRedeclaration]
+    samples: Isometry2d,
+    rtol: float = 1e-6,
+    atol=1e-6,
+    max_steps: int = 100,
+    throw: bool = True,
+) -> Isometry2d:
+    est_mean = se2.random.mean(samples.value, rtol, atol, max_steps, throw)
+    return Isometry2d.from_matrix(est_mean)
 
 
-@mean.register  # type: ignore
-def _mean_list_type(samples: list, iters: int = 100) -> Isometry:
-    coordinates = jnp.stack([c.coordinates for c in samples], axis=0)
-    return Isometry.from_matrix(_mean(coordinates, iters))
+@dispatch
+def mean(  # type: ignore[reportRedeclaration]
+    samples: Isometry3d,
+    rtol: float = 1e-6,
+    atol=1e-6,
+    max_steps: int = 100,
+    throw: bool = True,
+) -> Isometry3d:
+    est_mean = se3.random.mean(samples.value, rtol, atol, max_steps, throw)
+    return Isometry3d.from_matrix(est_mean)
 
 
-@singledispatch
-def check_mean(samples, mean):
-    return _check_mean(samples, mean)
+@dispatch
+def cov(mean: Rotation2d, samples: Rotation2d) -> Array:  # type: ignore[reportRedeclaration]
+    return so2.random.cov(mean.value, samples.value)
 
 
-def _check_mean(samples: Array, mean: Array) -> RealScalarLike:
-    errors = jax.vmap(lambda g: _as_vector(logm(jnp.linalg.inv(mean) @ g)))(samples)
-    return softnorm(jnp.sum(errors, axis=0))  # type: ignore
+@dispatch
+def cov(mean: Rotation3d, samples: Rotation3d) -> Array:  # type: ignore[reportRedeclaration]
+    return so3.random.cov(mean.value, samples.value)
 
 
-@check_mean.register
-def _check_mean_isometry_type(samples: Isometry, mean: Isometry) -> RealScalarLike:
-    return _check_mean(samples.coordinates, mean.coordinates)
+@dispatch
+def cov(mean: Isometry2d, samples: Isometry2d) -> Array:  # type: ignore[reportRedeclaration]
+    return se2.random.cov(mean.value, samples.value)
 
 
-@check_mean.register
-def _check_mean_list_type(samples: list, mean: Isometry) -> RealScalarLike:
-    coordinates = jnp.stack([c.coordinates for c in samples], axis=0)
-    return _check_mean(coordinates, mean.coordinates)
-
-
-@singledispatch
-def cov(samples, mean):
-    return _cov(samples, mean)
-
-
-def _cov(samples: Array, mean: Array) -> Array:
-    mean_inv = jnp.linalg.inv(mean)
-    ys = jax.vmap(lambda g: _as_vector(logm(mean_inv @ g)))(samples)
-    sigma = jnp.einsum("ni,nj->ij", ys, ys) / len(samples)
-    return sigma
-
-
-@cov.register
-def _cov_isometry_type(samples: Isometry, mean: Isometry) -> Array:
-    return _cov(samples.coordinates, mean.coordinates)
-
-
-@cov.register
-def _cov_list_type(samples: list, mean: Isometry) -> Array:
-    coordinates = jnp.stack([c.coordinates for c in samples], axis=0)
-    return _cov(coordinates, mean.coordinates)
+@dispatch
+def cov(mean: Isometry3d, samples: Isometry3d) -> Array:  # type: ignore[reportRedeclaration]
+    return se3.random.cov(mean.value, samples.value)

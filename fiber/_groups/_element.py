@@ -134,6 +134,11 @@ class AbstractTangentVector[GroupElement: AbstractGroupElement](eqx.Module):
 
     @classmethod
     @abstractmethod
+    def zeros(cls, point: GroupElement | None = None):
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
     def concatenate(cls, vectors: Sequence):
         raise NotImplementedError
 

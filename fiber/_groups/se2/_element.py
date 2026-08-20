@@ -171,6 +171,12 @@ class Twist2d(AbstractTangentVector[Isometry2d]):
         return _ravel_vector(self.value)
 
     @classmethod
+    def zeros(cls, point: Isometry2d | None = None):
+        if point is None:
+            point = Isometry2d.eye()
+        return cls(point, jnp.zeros_like(point.value))
+
+    @classmethod
     def concatenate(cls, vectors: Sequence[Twist2d]):
         points = Isometry2d.concatenate([vector.point for vector in vectors])
         return cls(points, jnp.concatenate([vector.value for vector in vectors]))

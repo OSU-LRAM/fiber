@@ -170,6 +170,12 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
         return _ravel_vector(self.value)
 
     @classmethod
+    def zeros(cls, point: Rotation3d | None = None):
+        if point is None:
+            point = Rotation3d.eye()
+        return cls(point, jnp.zeros_like(point.value))
+
+    @classmethod
     def concatenate(cls, vectors: Sequence[Spin3d]):
         points = Rotation3d.concatenate([vector.point for vector in vectors])
         return cls(points, jnp.concatenate([vector.value for vector in vectors]))

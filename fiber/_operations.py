@@ -572,6 +572,66 @@ def concatenate(vectors: Sequence[Wrench3d]) -> Wrench3d:  # type: ignore[report
 
 
 @dispatch
+def stack(elements: Sequence[Rotation2d]) -> Rotation2d:  # type: ignore[reportRedeclaration]
+    return Rotation2d.stack(elements)
+
+
+@dispatch
+def stack(elements: Sequence[Rotation3d]) -> Rotation3d:  # type: ignore[reportRedeclaration]
+    return Rotation3d.stack(elements)
+
+
+@dispatch
+def stack(elements: Sequence[Isometry2d]) -> Isometry2d:  # type: ignore[reportRedeclaration]
+    return Isometry2d.stack(elements)
+
+
+@dispatch
+def stack(elements: Sequence[Isometry3d]) -> Isometry3d:  # type: ignore[reportRedeclaration]
+    return Isometry3d.stack(elements)
+
+
+@dispatch
+def stack(vectors: Sequence[Spin2d]) -> Spin2d:  # type: ignore[reportRedeclaration]
+    return Spin2d.stack(vectors)
+
+
+@dispatch
+def stack(vectors: Sequence[Spin3d]) -> Spin3d:  # type: ignore[reportRedeclaration]
+    return Spin3d.stack(vectors)
+
+
+@dispatch
+def stack(vectors: Sequence[Twist2d]) -> Twist2d:  # type: ignore[reportRedeclaration]
+    return Twist2d.stack(vectors)
+
+
+@dispatch
+def stack(vectors: Sequence[Twist3d]) -> Twist3d:  # type: ignore[reportRedeclaration]
+    return Twist3d.stack(vectors)
+
+
+@dispatch
+def stack(vectors: Sequence[Moment2d]) -> Moment2d:  # type: ignore[reportRedeclaration]
+    return Moment2d.stack(vectors)
+
+
+@dispatch
+def stack(vectors: Sequence[Moment3d]) -> Moment3d:  # type: ignore[reportRedeclaration]
+    return Moment3d.stack(vectors)
+
+
+@dispatch
+def stack(vectors: Sequence[Wrench2d]) -> Wrench2d:  # type: ignore[reportRedeclaration]
+    return Wrench2d.stack(vectors)
+
+
+@dispatch
+def stack(vectors: Sequence[Wrench3d]) -> Wrench3d:  # type: ignore[reportRedeclaration]
+    return Wrench3d.stack(vectors)
+
+
+@dispatch
 def pair(w: Moment2d, v: Spin2d) -> RealScalarLike:  # type: ignore[reportRedeclaration]
     return w.pair(v)
 

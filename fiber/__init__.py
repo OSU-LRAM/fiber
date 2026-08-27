@@ -60,6 +60,7 @@ from ._operations import (
     rminus,
     rplus,
     shape,
+    stack,
 )
 
 __all__ = [
@@ -111,4 +112,5 @@ __all__ = [
     "rminus",
     "rplus",
     "shape",
+    "stack",
 ]

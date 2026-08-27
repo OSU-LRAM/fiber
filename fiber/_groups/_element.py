@@ -68,6 +68,11 @@ class AbstractGroupElement(eqx.Module):
     def concatenate(cls, elements: Sequence):
         raise NotImplementedError
 
+    @classmethod
+    @abstractmethod
+    def stack(cls, elements: Sequence):
+        raise NotImplementedError
+
     def __len__(self) -> int:
         if self.single:
             raise TypeError("Single element has no len().")
@@ -142,6 +147,11 @@ class AbstractTangentVector[GroupElement: AbstractGroupElement](eqx.Module):
     def concatenate(cls, vectors: Sequence):
         raise NotImplementedError
 
+    @classmethod
+    @abstractmethod
+    def stack(cls, vectors: Sequence):
+        raise NotImplementedError
+
     def __len__(self) -> int:
         if self.single:
             raise TypeError("Single vector has no len().")
@@ -195,6 +205,11 @@ class AbstractCotangentVector[GroupElement: AbstractGroupElement](eqx.Module):
     @classmethod
     @abstractmethod
     def concatenate(cls, vectors: Sequence):
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
+    def stack(cls, vectors: Sequence):
         raise NotImplementedError
 
     def __len__(self) -> int:

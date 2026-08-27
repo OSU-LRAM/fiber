@@ -89,6 +89,10 @@ class Isometry2d(AbstractGroupElement):
     def concatenate(cls, elements: Sequence[Isometry2d]):
         return cls(jnp.concatenate([element.value for element in elements]))
 
+    @classmethod
+    def stack(cls, elements: Sequence[Isometry2d]):
+        return cls(jnp.stack([element.value for element in elements]))
+
     def __getitem__(self, indexer):
         if self.single:
             raise TypeError("Single element is not subscriptable.")
@@ -180,6 +184,11 @@ class Twist2d(AbstractTangentVector[Isometry2d]):
     def concatenate(cls, vectors: Sequence[Twist2d]):
         points = Isometry2d.concatenate([vector.point for vector in vectors])
         return cls(points, jnp.concatenate([vector.value for vector in vectors]))
+
+    @classmethod
+    def stack(cls, vectors: Sequence[Twist2d]):
+        points = Isometry2d.stack([vector.point for vector in vectors])
+        return cls(points, jnp.stack([vector.value for vector in vectors]))
 
     def __getitem__(self, indexer):
         if self.single:
@@ -282,6 +291,11 @@ class Wrench2d(AbstractCotangentVector[Isometry2d]):
     def concatenate(cls, vectors: Sequence[Wrench2d]):
         points = Isometry2d.concatenate([vector.point for vector in vectors])
         return cls(points, jnp.concatenate([vector.value for vector in vectors]))
+
+    @classmethod
+    def stack(cls, vectors: Sequence[Wrench2d]):
+        points = Isometry2d.stack([vector.point for vector in vectors])
+        return cls(points, jnp.stack([vector.value for vector in vectors]))
 
     def __getitem__(self, indexer):
         if self.single:

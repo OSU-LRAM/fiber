@@ -20,7 +20,12 @@
 
 from ._euler import LieEuler
 from ._euler_heun import EulerHeun
-from ._term import ImplicitVariationalTerm, SharpTerm, VariationalControlTerm
+from ._term import (
+    ImplicitVariationalTerm,
+    SharpControlTerm,
+    SharpTerm,
+    VariationalControlTerm,
+)
 from ._variational_integrator import LieSVI
 
 __all__ = [
@@ -28,6 +33,7 @@ __all__ = [
     "ImplicitVariationalTerm",
     "LieEuler",
     "LieSVI",
+    "SharpControlTerm",
     "SharpTerm",
     "VariationalControlTerm",
 ]

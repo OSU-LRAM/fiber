@@ -36,7 +36,7 @@ from optimistix import AbstractRootFinder
 from .._custom_types import Args, BoolScalarLike, DenseInfo, RealScalarLike
 from .._groups._element import AbstractCotangentVector, AbstractTangentVector
 from .._local_interpolation import LocalLeftBundleInterpolation as LocalInterpolation
-from ._term import ImplicitVariationalTerm, VariationalDiffusionTerm
+from ._term import ImplicitVariationalTerm, VariationalControlTerm
 
 type _ErrorEstimate = None
 type _SolverState = None
@@ -46,7 +46,7 @@ type _CV = AbstractCotangentVector
 _Terms = MultiTerm[
     tuple[
         ImplicitVariationalTerm[AbstractCotangentVector],
-        VariationalDiffusionTerm[AbstractCotangentVector],
+        VariationalControlTerm[AbstractCotangentVector],
     ]
 ]
 

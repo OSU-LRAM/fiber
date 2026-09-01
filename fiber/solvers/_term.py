@@ -50,6 +50,23 @@ class SharpTerm(AbstractTerm[_CV, Control]):
         return self.prod(self.vf(t, y, args), control)
 
 
+class SharpControlTerm(AbstractTerm[_CV, Control]):
+    vector_field: Callable[[RealScalarLike, _V, Args], _CV]
+    control: Control
+
+    def vf(self, t: RealScalarLike, y: _V, args: Args) -> _CV:
+        return self.vector_field(t, y, args)
+
+    def contr(self, t0: RealScalarLike, t1: RealScalarLike, **kwargs) -> Control:
+        return self.control.evaluate(t0, t1, **kwargs)
+
+    def prod(self, vf: _CV, control: RealScalarLike) -> _CV:
+        return type(vf).from_vector(vf.as_vector() * control, point=vf.point)
+
+    def vf_prod(self, t: RealScalarLike, y: _V, args: Args, control: Control) -> _CV:
+        return self.prod(self.vf(t, y, args), control)
+
+
 class ImplicitVariationalTerm(AbstractTerm[_CV, Control]):
     vector_field: Callable[[RealScalarLike, _V, Args, Control], _CV]
     implicit_f: Callable[[RealScalarLike, _V, Args, Control], _CV]
@@ -70,7 +87,7 @@ class ImplicitVariationalTerm(AbstractTerm[_CV, Control]):
         return self.vf(t, y, args, control)
 
 
-class VariationalDiffusionTerm(AbstractTerm[_CV, Control]):
+class VariationalControlTerm(AbstractTerm[_CV, Control]):
     vector_field: Callable[[RealScalarLike, _V, Args, Control], _CV]
     control: Control
 

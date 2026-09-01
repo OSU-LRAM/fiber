@@ -48,10 +48,11 @@ body:
     attributes:
       label: "Runtime Environment"
       description: >
-        Please provide a description of the environment in which the error
-        occurred.
+        Please provide the versions of fiber, Python, and JAX (jax and jaxlib),
+        the operating system, and whether JAX is running on CPU or GPU.
       placeholder: >
-        Raspberry Pi 4 running Ubuntu 22.04 natively.
+        fiber 0.1.0, Python 3.14, jax 0.4.38 / jaxlib 0.4.38 on CUDA GPU,
+        Ubuntu 24.04.
     validations:
       required: true
 

@@ -19,21 +19,28 @@
 # THE SOFTWARE.
 
 from collections.abc import Callable
-from typing import ClassVar
+from typing import ClassVar, cast
 
 import equinox as eqx
 from diffrax import RESULTS, AbstractStratonovichSolver, AbstractTerm, MultiTerm
+from diffrax._term import WrapTerm
 
-from .._custom_types import VF, Args, BoolScalarLike, DenseInfo, RealScalarLike
-from .._groups import AbstractTangentVector
+from .._custom_types import VF, Args, BoolScalarLike, Control, DenseInfo, RealScalarLike
+from .._groups import AbstractCotangentVector, AbstractTangentVector
 from .._local_interpolation import LocalLeftBundleInterpolation as LocalInterpolation
 from .._operations import rplus
 from ._term import SharpTerm
 
 type _ErrorEstimate = None
 type _SolverState = None
-type _Terms = MultiTerm[tuple[SharpTerm, AbstractTerm]]
 type _V = AbstractTangentVector
+
+_Terms = MultiTerm[
+    tuple[
+        SharpTerm[AbstractCotangentVector],
+        AbstractTerm[AbstractCotangentVector, Control],
+    ]
+]
 
 
 class EulerHeun(AbstractStratonovichSolver):
@@ -72,20 +79,20 @@ class EulerHeun(AbstractStratonovichSolver):
         del solver_state, made_jump
 
         drift, diffusion = terms.terms
+        dual_metric = cast(SharpTerm, cast(WrapTerm, drift).term).dual_metric
+
         dt = drift.contr(t0, t1)
         dw = diffusion.contr(t0, t1)
 
         f0 = drift.vf_prod(t0, y0, args, dt)
-        h0 = diffusion.prod(diffusion.vf(t0, y0, args), dw)
-        h0 = drift.term.dual_metric(y0, h0)  # type: ignore
+        h0 = diffusion.vf_prod(t0, y0, args, dw)
 
-        y_prime = y0 + h0
+        y_prime = y0 + dual_metric(y0, h0)  # type: ignore[reportOperatorIssue]
         h_prime = diffusion.vf_prod(t0, y_prime, args, dw)
-        h_prime = drift.term.dual_metric(y_prime, h_prime)  # type: ignore
 
-        vf = f0 + 0.5 * (h0 + h_prime)
-        y1 = y0 + vf
-        y1 = eqx.tree_at(lambda w: w.point.value, y1, rplus(y0.point, f0).value)
+        k = f0 + 0.5 * (h0 + h_prime)
+        y1 = y0 + dual_metric(y0, k)  # type: ignore[reportOperatorIssue]
+        y1 = eqx.tree_at(lambda w: w.point.value, y1, rplus(y0.point, y0 * dt).value)
 
         dense_info = {"y0": y0, "y1": y1}
         return y1, None, dense_info, None, RESULTS.successful
@@ -94,7 +101,8 @@ class EulerHeun(AbstractStratonovichSolver):
         self,
         terms: _Terms,
         t0: RealScalarLike,
-        y0: AbstractTangentVector,
+        y0: _V,
         args: Args,
     ) -> VF:
-        return terms.vf(t0, y0, args)
+        drift, diffusion = terms.terms
+        return drift.vf(t0, y0, args), diffusion.vf(t0, y0, args)

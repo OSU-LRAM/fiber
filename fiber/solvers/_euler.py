@@ -24,7 +24,7 @@ from typing import ClassVar
 import equinox as eqx
 from diffrax import RESULTS, AbstractItoSolver, AbstractTerm
 
-from .._custom_types import VF, Args, BoolScalarLike, DenseInfo, RealScalarLike
+from .._custom_types import VF, Args, BoolScalarLike, Control, DenseInfo, RealScalarLike
 from .._groups._element import AbstractTangentVector
 from .._local_interpolation import LocalLeftBundleInterpolation as LocalInterpolation
 from .._operations import rplus
@@ -35,7 +35,7 @@ type _V = AbstractTangentVector
 
 
 class LieEuler(AbstractItoSolver):
-    term_structure: ClassVar = AbstractTerm
+    term_structure: ClassVar = AbstractTerm[AbstractTangentVector, Control]
     interpolation_cls: ClassVar[Callable[..., LocalInterpolation]] = LocalInterpolation
 
     def order(self, terms):

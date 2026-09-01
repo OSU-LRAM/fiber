@@ -40,9 +40,15 @@ from ._term import ImplicitVariationalTerm, VariationalDiffusionTerm
 
 type _ErrorEstimate = None
 type _SolverState = None
-type _Terms = MultiTerm[tuple[ImplicitVariationalTerm, VariationalDiffusionTerm]]
 type _V = AbstractTangentVector
 type _CV = AbstractCotangentVector
+
+_Terms = MultiTerm[
+    tuple[
+        ImplicitVariationalTerm[AbstractCotangentVector],
+        VariationalDiffusionTerm[AbstractCotangentVector],
+    ]
+]
 
 
 def _implicit_relation(v: Array, solver_args: Args) -> Array:

@@ -71,7 +71,7 @@ the typed wrapper classes:
 ```python
 import fiber.numpy as fnp
 
-w_hat = fnp.skew3(w_vec)     # 3x3 skew-symmetric matrix
+w_hat = fnp.skew3(w_vec)  # 3x3 skew-symmetric matrix
 R_mat = fnp.so3.expm(w_hat)  # 3x3 rotation matrix
 ```
 

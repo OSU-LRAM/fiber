@@ -25,7 +25,7 @@ import equinox as eqx
 from diffrax import RESULTS, AbstractStratonovichSolver, AbstractTerm, MultiTerm
 from diffrax._term import WrapTerm
 
-from .._custom_types import VF, Args, BoolScalarLike, Control, DenseInfo, RealScalarLike
+from .._custom_types import VF, Args, BoolScalarLike, DenseInfo, RealScalarLike
 from .._groups import AbstractCotangentVector, AbstractTangentVector
 from .._local_interpolation import LocalLeftBundleInterpolation as LocalInterpolation
 from .._operations import rplus
@@ -38,7 +38,7 @@ type _V = AbstractTangentVector
 _Terms = MultiTerm[
     tuple[
         SharpTerm[AbstractCotangentVector],
-        AbstractTerm[AbstractCotangentVector, Control],
+        AbstractTerm,
     ]
 ]
 
@@ -85,10 +85,14 @@ class EulerHeun(AbstractStratonovichSolver):
         dw = diffusion.contr(t0, t1)
 
         f0 = drift.vf_prod(t0, y0, args, dt)
-        h0 = diffusion.vf_prod(t0, y0, args, dw)
+        cv = type(f0)
+
+        h0 = diffusion.prod(diffusion.vf(t0, y0, args), dw)
+        h0 = cv.from_vector(h0, point=y0.point)
 
         y_prime = y0 + dual_metric(y0, h0)  # type: ignore[reportOperatorIssue]
-        h_prime = diffusion.vf_prod(t0, y_prime, args, dw)
+        h_prime = diffusion.prod(diffusion.vf(t0, y_prime, args), dw)
+        h_prime = cv.from_vector(h_prime, point=y_prime.point)
 
         k = f0 + 0.5 * (h0 + h_prime)
         y1 = y0 + dual_metric(y0, k)  # type: ignore[reportOperatorIssue]

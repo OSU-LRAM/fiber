@@ -22,7 +22,6 @@ from ._euler import LieEuler
 from ._euler_heun import EulerHeun
 from ._term import (
     ImplicitVariationalTerm,
-    SharpControlTerm,
     SharpTerm,
     VariationalControlTerm,
 )
@@ -33,7 +32,6 @@ __all__ = [
     "ImplicitVariationalTerm",
     "LieEuler",
     "LieSVI",
-    "SharpControlTerm",
     "SharpTerm",
     "VariationalControlTerm",
 ]

@@ -70,7 +70,7 @@ class ImplicitVariationalTerm(AbstractTerm[_CV, Control]):
         return self.vf(t, y, args, control)
 
 
-class VariationalDiffusionTerm(AbstractTerm[_CV, Control]):
+class VariationalControlTerm(AbstractTerm[_CV, Control]):
     vector_field: Callable[[RealScalarLike, _V, Args, Control], _CV]
     control: Control
 

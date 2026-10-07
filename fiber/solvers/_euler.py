@@ -69,9 +69,10 @@ class LieEuler(AbstractItoSolver):
     ) -> tuple[_V, _ErrorEstimate, DenseInfo, _SolverState, RESULTS]:
         del solver_state, made_jump
 
-        vf = terms.vf_prod(t0, y0, args, terms.contr(t0, t1))
+        dt = terms.contr(t0, t1)
+        vf = terms.vf_prod(t0, y0, args, dt)
         y1 = y0 + vf
-        y1 = eqx.tree_at(lambda w: w.point.value, y1, rplus(y0.point, vf).value)
+        y1 = eqx.tree_at(lambda w: w.point.value, y1, rplus(y0.point, y0 * dt).value)
 
         dense_info = {"y0": y0, "y1": y1}
         return y1, None, dense_info, None, RESULTS.successful

@@ -85,10 +85,6 @@ def mean(
     init_mean = jnp.mean(exp_coords, axis=0)
     y0 = expm(skew2(init_mean))
 
-    # find the mean using a fixed-point iteration, which stops moving once the errors
-    # average to zero in the tangent space of the mean. we differentiate through the
-    # iterations, since the implicit adjoint's linear solve is singular in the
-    # directions that leave the group
     sol = optx.fixed_point(
         update,
         optx.FixedPointIteration(rtol, atol),

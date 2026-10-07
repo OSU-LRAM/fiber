@@ -25,7 +25,6 @@ import jax.random as jr
 import optimistix as optx
 from jaxtyping import Array, PRNGKeyArray
 
-from ...._vecfuncs import softnorm
 from .._element import _as_vector, _from_vector
 from .._operations import expm, logm, lplus, rminus, rplus
 
@@ -73,22 +72,26 @@ def mean(
     max_steps: int = 100,
     throw: bool = True,
 ) -> Array:
-    def residuals(mean, samples):
+    def update(mean, samples):
         errors = _as_vector(rminus(samples, mean))
-        return softnorm(jnp.sum(errors, axis=0))
+        return rplus(mean, _from_vector(jnp.mean(errors, axis=0)))
 
     # construct the initial guess to warm-start the solver
     exp_coords = _as_vector(logm(samples))
     init_mean = jnp.mean(exp_coords, axis=0)
     y0 = expm(_from_vector(init_mean))
 
-    # find the mean using a root-finder
-    sol = optx.root_find(
-        residuals,
-        optx.Newton(rtol, atol),
+    # find the mean using a fixed-point iteration, which stops moving once the errors
+    # average to zero in the tangent space of the mean. we differentiate through the
+    # iterations, since the implicit adjoint's linear solve is singular in the
+    # directions that leave the group
+    sol = optx.fixed_point(
+        update,
+        optx.FixedPointIteration(rtol, atol),
         y0,
         args=samples,
         max_steps=max_steps,
+        adjoint=optx.RecursiveCheckpointAdjoint(),
         throw=throw,
     )
 

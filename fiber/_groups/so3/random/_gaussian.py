@@ -25,7 +25,7 @@ import jax.random as jr
 import optimistix as optx
 from jaxtyping import Array, PRNGKeyArray
 
-from ...._vecfuncs import skew3, softnorm, vex3
+from ...._vecfuncs import skew3, vex3
 from .._operations import expm, logm, lplus, rminus, rplus
 
 
@@ -72,22 +72,22 @@ def mean(
     max_steps: int = 100,
     throw: bool = True,
 ) -> Array:
-    def residuals(mean, samples):
+    def update(mean, samples):
         errors = vex3(rminus(samples, mean))
-        return softnorm(jnp.sum(errors, axis=0))
+        return rplus(mean, skew3(jnp.mean(errors, axis=0)))
 
     # construct the initial guess to warm-start the solver
     exp_coords = vex3(logm(samples))
     init_mean = jnp.mean(exp_coords, axis=0)
     y0 = expm(skew3(init_mean))
 
-    # find the mean using a root-finder
-    sol = optx.root_find(
-        residuals,
-        optx.Newton(rtol, atol),
+    sol = optx.fixed_point(
+        update,
+        optx.FixedPointIteration(rtol, atol),
         y0,
         args=samples,
         max_steps=max_steps,
+        adjoint=optx.RecursiveCheckpointAdjoint(),
         throw=throw,
     )
 

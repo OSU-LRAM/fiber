@@ -94,8 +94,9 @@ def mean(  # type: ignore[reportRedeclaration]
     atol=1e-6,
     max_steps: int = 100,
     throw: bool = True,
+    left: bool = True,
 ) -> Rotation2d:
-    est_mean = so2.random.mean(samples.value, rtol, atol, max_steps, throw)
+    est_mean = so2.random.mean(samples.value, rtol, atol, max_steps, throw, left)
     return Rotation2d.from_matrix(est_mean)
 
 
@@ -106,8 +107,9 @@ def mean(  # type: ignore[reportRedeclaration]
     atol=1e-6,
     max_steps: int = 100,
     throw: bool = True,
+    left: bool = True,
 ) -> Rotation3d:
-    est_mean = so3.random.mean(samples.value, rtol, atol, max_steps, throw)
+    est_mean = so3.random.mean(samples.value, rtol, atol, max_steps, throw, left)
     return Rotation3d.from_matrix(est_mean)
 
 
@@ -118,8 +120,9 @@ def mean(  # type: ignore[reportRedeclaration]
     atol=1e-6,
     max_steps: int = 100,
     throw: bool = True,
+    left: bool = True,
 ) -> Isometry2d:
-    est_mean = se2.random.mean(samples.value, rtol, atol, max_steps, throw)
+    est_mean = se2.random.mean(samples.value, rtol, atol, max_steps, throw, left)
     return Isometry2d.from_matrix(est_mean)
 
 
@@ -130,26 +133,35 @@ def mean(  # type: ignore[reportRedeclaration]
     atol=1e-6,
     max_steps: int = 100,
     throw: bool = True,
+    left: bool = True,
 ) -> Isometry3d:
-    est_mean = se3.random.mean(samples.value, rtol, atol, max_steps, throw)
+    est_mean = se3.random.mean(samples.value, rtol, atol, max_steps, throw, left)
     return Isometry3d.from_matrix(est_mean)
 
 
 @dispatch
-def cov(mean: Rotation2d, samples: Rotation2d) -> Array:  # type: ignore[reportRedeclaration]
-    return so2.random.cov(mean.value, samples.value)
+def cov(  # type: ignore[reportRedeclaration]
+    mean: Rotation2d, samples: Rotation2d, left: bool = True
+) -> Array:
+    return so2.random.cov(mean.value, samples.value, left)
 
 
 @dispatch
-def cov(mean: Rotation3d, samples: Rotation3d) -> Array:  # type: ignore[reportRedeclaration]
-    return so3.random.cov(mean.value, samples.value)
+def cov(  # type: ignore[reportRedeclaration]
+    mean: Rotation3d, samples: Rotation3d, left: bool = True
+) -> Array:
+    return so3.random.cov(mean.value, samples.value, left)
 
 
 @dispatch
-def cov(mean: Isometry2d, samples: Isometry2d) -> Array:  # type: ignore[reportRedeclaration]
-    return se2.random.cov(mean.value, samples.value)
+def cov(  # type: ignore[reportRedeclaration]
+    mean: Isometry2d, samples: Isometry2d, left: bool = True
+) -> Array:
+    return se2.random.cov(mean.value, samples.value, left)
 
 
 @dispatch
-def cov(mean: Isometry3d, samples: Isometry3d) -> Array:  # type: ignore[reportRedeclaration]
-    return se3.random.cov(mean.value, samples.value)
+def cov(  # type: ignore[reportRedeclaration]
+    mean: Isometry3d, samples: Isometry3d, left: bool = True
+) -> Array:
+    return se3.random.cov(mean.value, samples.value, left)

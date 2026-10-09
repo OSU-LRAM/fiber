@@ -26,7 +26,7 @@ import optimistix as optx
 from jaxtyping import Array, PRNGKeyArray
 
 from ...._vecfuncs import skew2, vex2
-from .._operations import expm, logm, lplus, rminus, rplus
+from .._operations import expm, lminus, logm, lplus, rminus, rplus
 
 
 def sample_lie_algebra(
@@ -75,10 +75,13 @@ def mean(
     atol=1e-6,
     max_steps: int = 100,
     throw: bool = True,
+    left: bool = True,
 ) -> Array:
+    minus, plus = (rminus, rplus) if left else (lminus, lplus)
+
     def update(mean, samples):
-        errors = vex2(rminus(samples, mean))
-        return rplus(mean, skew2(jnp.mean(errors, axis=0)))
+        errors = vex2(minus(samples, mean))
+        return plus(mean, skew2(jnp.mean(errors, axis=0)))
 
     # construct the initial guess to warm-start the solver
     exp_coords = vex2(logm(samples))
@@ -98,7 +101,8 @@ def mean(
     return sol.value
 
 
-def cov(mean: Array, samples: Array) -> Array:
-    distances = vex2(rminus(samples, mean))
+def cov(mean: Array, samples: Array, left: bool = True) -> Array:
+    minus = rminus if left else lminus
+    distances = vex2(minus(samples, mean))
     sigma = jnp.divide(jnp.einsum("n,n->", distances, distances), len(samples))
     return sigma

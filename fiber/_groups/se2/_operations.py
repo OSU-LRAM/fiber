@@ -54,7 +54,7 @@ def dadj(w: Array, p: Array):
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def dadj_op(w: Array) -> Array:
-    return -adj_op(w).T
+    return adj_op(w).T
 
 
 @functools.partial(jnp.vectorize, signature="(n,n),(n)->(n)")
@@ -96,7 +96,7 @@ def dAdj(g: Array, p: Array) -> Array:
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def dAdj_op(g: Array) -> Array:
-    return Adj_op(inv(g)).T
+    return Adj_op(g).T
 
 
 @functools.partial(jnp.vectorize, signature="(n,n),(n)->(n)")

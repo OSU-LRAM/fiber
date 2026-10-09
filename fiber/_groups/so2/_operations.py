@@ -50,7 +50,7 @@ def dadj(w: Array, p: RealScalarLike) -> RealScalarLike:
 
 @functools.partial(jnp.vectorize, signature="(n,n)->()")
 def dadj_op(w: Array) -> RealScalarLike:
-    return -adj_op(w)
+    return adj_op(w)
 
 
 @functools.partial(jnp.vectorize, signature="(n,n),()->()")
@@ -91,7 +91,7 @@ def dAdj(g: Array, p: RealScalarLike) -> RealScalarLike:
 
 @functools.partial(jnp.vectorize, signature="(n,n)->()")
 def dAdj_op(g: Array) -> RealScalarLike:
-    return Adj_op(inv(g))
+    return Adj_op(g)
 
 
 @functools.partial(jnp.vectorize, signature="(n,n),()->()")

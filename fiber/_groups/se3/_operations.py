@@ -20,11 +20,11 @@
 
 import functools
 
-import jax
 import jax.numpy as jnp
 from jaxtyping import Array
 
-from ..._vecfuncs import skew3, softnorm, vex3
+from ..._coefficients import cosc, series_or_closed, sinc, sinc3
+from ..._vecfuncs import skew3, vex3
 from .. import so3
 
 
@@ -51,7 +51,7 @@ def dadj(w: Array, p: Array):
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def dadj_op(w: Array) -> Array:
-    return -adj_op(w).T
+    return adj_op(w).T
 
 
 @functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
@@ -72,7 +72,7 @@ def Adj(g: Array, w: Array) -> Array:
 @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def Adj_op(g: Array) -> Array:
     pos, rot = g[:3, 3], g[:3, :3]
-    return jnp.block([[rot, skew3(pos)], [jnp.zeros_like(rot), rot]])
+    return jnp.block([[rot, skew3(pos) @ rot], [jnp.zeros_like(rot), rot]])
 
 
 @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
@@ -92,7 +92,7 @@ def dAdj(g: Array, p: Array) -> Array:
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def dAdj_op(g: Array) -> Array:
-    return Adj_op(inv(g)).T
+    return Adj_op(g).T
 
 
 @functools.partial(jnp.vectorize, signature="(n,n),(m)->(m)")
@@ -108,39 +108,28 @@ def dAdj_inv_op(g: Array) -> Array:
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def expm(w: Array) -> Array:
     lin, ang = w[:3, 3], w[:3, :3]
-    theta = softnorm(vex3(ang))
-    A = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 1 - (theta**2 / 6) + (theta**4 / 120),
-        lambda: jnp.sin(theta) / theta,
-    )
-    B = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 0.5 - (theta**2 / 24) + (theta**4 / 720),
-        lambda: (1 - jnp.cos(theta)) / (theta**2),
-    )
-    C = (1 - A) / theta**2
-    V = jnp.eye(3) + B * ang + C * (ang @ ang)
+    V = so3.dexpm(ang)
     return jnp.block([[so3.expm(ang), (V @ lin).reshape(3, 1)], [jnp.zeros(3), 1]])
 
 
-def _se3_V(lin: Array, ang_hat: Array, theta, a, b, c) -> Array:
+def _se3_V(lin: Array, ang_hat: Array) -> Array:
     lin_hat = skew3(lin)
     ang = vex3(ang_hat)
-    q1 = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: -(1 / 12) + (theta**2 / 180),
-        lambda: (a - 2 * b) / theta**2,
+    theta2 = jnp.sum(ang**2)
+    q1 = series_or_closed(
+        theta2,
+        lambda x: -1 / 12 + x / 180 - x**2 / 6720 + x**3 / 453600 - x**4 / 47900160,
+        lambda x: (sinc(x) - 2 * cosc(x)) / x,
     )
-    q2 = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: -(1 / 60) + (theta**2 / 1260),
-        lambda: (b - 3 * c) / theta**2,
+    q2 = series_or_closed(
+        theta2,
+        lambda x: -1 / 60 + x / 1260 - x**2 / 60480 + x**3 / 4989600 - x**4 / 622702080,
+        lambda x: (cosc(x) - 3 * sinc3(x)) / x,
     )
     Q = q1 * ang_hat + q2 * (ang_hat @ ang_hat)
     return (
-        b * lin_hat
-        + c * (ang_hat @ lin_hat + lin_hat @ ang_hat)
+        cosc(theta2) * lin_hat
+        + sinc3(theta2) * (ang_hat @ lin_hat + lin_hat @ ang_hat)
         + jnp.dot(ang, lin) * Q
     )
 
@@ -148,25 +137,8 @@ def _se3_V(lin: Array, ang_hat: Array, theta, a, b, c) -> Array:
 @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def dexpm(w: Array) -> Array:
     lin, ang_hat = w[:3, 3], w[:3, :3]
-    ang = vex3(ang_hat)
-    theta = softnorm(ang)
-    a = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 1 - (theta**2 / 6) + (theta**4 / 120),
-        lambda: jnp.sin(theta) / theta,
-    )
-    b = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 0.5 - (theta**2 / 24) + (theta**4 / 720),
-        lambda: (1 - jnp.cos(theta)) / (theta**2),
-    )
-    c = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: (1 / 6) + (theta**2 / 120),
-        lambda: (theta - jnp.sin(theta)) / theta**3,
-    )
-    V = _se3_V(lin, ang_hat, theta, a, b, c)
-    D = jnp.eye(3) + b * ang_hat + c * (ang_hat @ ang_hat)
+    V = _se3_V(lin, ang_hat)
+    D = so3.dexpm(ang_hat)
     return jnp.block([[D, V], [jnp.zeros_like(V), D]])
 
 
@@ -174,52 +146,15 @@ def dexpm(w: Array) -> Array:
 def logm(g: Array) -> Array:
     pos, rot = g[:3, 3], g[:3, :3]
     ang_hat = so3.logm(rot)
-    ang = vex3(ang_hat)
-    jac = jnp.eye(3)
-    V = jax.lax.cond(
-        jnp.isclose(softnorm(ang), 0.0),
-        lambda: jac,
-        lambda: (
-            jac
-            - 0.5 * ang_hat
-            + (
-                (1 / (softnorm(ang) ** 2))
-                - (1 + jnp.cos(softnorm(ang)))
-                / (2 * softnorm(ang) * jnp.sin(softnorm(ang)))
-            )
-            * (ang_hat @ ang_hat)
-        ),
-    )
+    V = so3.dlogm(ang_hat)
     return jnp.block([[ang_hat, (V @ pos).reshape(3, 1)], [jnp.zeros(4)]])
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(m,m)")
 def dlogm(w: Array) -> Array:
     lin, ang_hat = w[:3, 3], w[:3, :3]
-    ang = vex3(ang_hat)
-    theta = softnorm(ang)
-    a = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 1 - (theta**2 / 6) + (theta**4 / 120),
-        lambda: jnp.sin(theta) / theta,
-    )
-    b = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 0.5 - (theta**2 / 24) + (theta**4 / 720),
-        lambda: (1 - jnp.cos(theta)) / (theta**2),
-    )
-    c = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: (1 / 6) + (theta**2 / 120),
-        lambda: (theta - jnp.sin(theta)) / theta**3,
-    )
-    e = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: (1 / 12) + (theta**2 / 720),
-        lambda: (b - 0.5 * a) / (1 - jnp.cos(theta)),
-    )
-    B = _se3_V(lin, ang_hat, theta, a, b, c)
-    D = jnp.eye(3) - 0.5 * ang_hat + e * (ang_hat @ ang_hat)
+    B = _se3_V(lin, ang_hat)
+    D = so3.dlogm(ang_hat)
     return jnp.block([[D, -D @ B @ D], [jnp.zeros_like(D), D]])
 
 

@@ -221,7 +221,8 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
     def __sub__(self, other: ArrayLike) -> Spin3d:
         return Spin3d(self.point, self.value - other)
 
-    __rsub__ = __sub__
+    def __rsub__(self, other: ArrayLike) -> Spin3d:
+        return Spin3d(self.point, other - self.value)
 
     @dispatch
     def __mul__(self, other: Spin3d) -> Spin3d:  # type: ignore[reportRedeclaration]
@@ -241,7 +242,8 @@ class Spin3d(AbstractTangentVector[Rotation3d]):
     def __truediv__(self, other: ArrayLike) -> Spin3d:
         return Spin3d(self.point, self.value / other)
 
-    __rtruediv__ = __truediv__
+    def __rtruediv__(self, other: ArrayLike) -> Spin3d:
+        return Spin3d(self.point, other / self.value)
 
     def __repr__(self) -> str:
         repr = np.array2string(cast(np.ndarray, self.value), prefix="Spin3d(")
@@ -326,7 +328,8 @@ class Moment3d(AbstractCotangentVector[Rotation3d]):
     def __sub__(self, other: ArrayLike) -> Moment3d:
         return Moment3d(self.point, self.value - other)
 
-    __rsub__ = __sub__
+    def __rsub__(self, other: ArrayLike) -> Moment3d:
+        return Moment3d(self.point, other - self.value)
 
     @dispatch
     def __mul__(self, other: Moment3d) -> Moment3d:  # type: ignore[reportRedeclaration]
@@ -346,7 +349,8 @@ class Moment3d(AbstractCotangentVector[Rotation3d]):
     def __truediv__(self, other: ArrayLike) -> Moment3d:
         return Moment3d(self.point, self.value / other)
 
-    __rtruediv__ = __truediv__
+    def __rtruediv__(self, other: ArrayLike) -> Moment3d:
+        return Moment3d(self.point, other / self.value)
 
     def __repr__(self) -> str:
         repr = np.array2string(cast(np.ndarray, self.value), prefix="Moment3d(")

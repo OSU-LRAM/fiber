@@ -222,7 +222,8 @@ class Twist2d(AbstractTangentVector[Isometry2d]):
     def __sub__(self, other: ArrayLike) -> Twist2d:
         return Twist2d(self.point, self.value - other)
 
-    __rsub__ = __sub__
+    def __rsub__(self, other: ArrayLike) -> Twist2d:
+        return Twist2d(self.point, other - self.value)
 
     @dispatch
     def __mul__(self, other: Twist2d) -> Twist2d:  # type: ignore[reportRedeclaration]
@@ -242,7 +243,8 @@ class Twist2d(AbstractTangentVector[Isometry2d]):
     def __truediv__(self, other: ArrayLike) -> Twist2d:
         return Twist2d(self.point, self.value / other)
 
-    __rtruediv__ = __truediv__
+    def __rtruediv__(self, other: ArrayLike) -> Twist2d:
+        return Twist2d(self.point, other / self.value)
 
     def __repr__(self) -> str:
         repr = np.array2string(cast(np.ndarray, self.value), prefix="Twist2d(")
@@ -329,7 +331,8 @@ class Wrench2d(AbstractCotangentVector[Isometry2d]):
     def __sub__(self, other: ArrayLike) -> Wrench2d:
         return Wrench2d(self.point, self.value - other)
 
-    __rsub__ = __sub__
+    def __rsub__(self, other: ArrayLike) -> Wrench2d:
+        return Wrench2d(self.point, other - self.value)
 
     @dispatch
     def __mul__(self, other: Wrench2d) -> Wrench2d:  # type: ignore[reportRedeclaration]
@@ -349,7 +352,8 @@ class Wrench2d(AbstractCotangentVector[Isometry2d]):
     def __truediv__(self, other: ArrayLike) -> Wrench2d:
         return Wrench2d(self.point, self.value / other)
 
-    __rtruediv__ = __truediv__
+    def __rtruediv__(self, other: ArrayLike) -> Wrench2d:
+        return Wrench2d(self.point, other / self.value)
 
     def __repr__(self) -> str:
         repr = np.array2string(cast(np.ndarray, self.value), prefix="Wrench2d(")

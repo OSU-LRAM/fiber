@@ -232,7 +232,8 @@ class Twist3d(AbstractTangentVector[Isometry3d]):
     def __sub__(self, other: ArrayLike) -> Twist3d:
         return Twist3d(self.point, self.value - other)
 
-    __rsub__ = __sub__
+    def __rsub__(self, other: ArrayLike) -> Twist3d:
+        return Twist3d(self.point, other - self.value)
 
     @dispatch
     def __mul__(self, other: Twist3d) -> Twist3d:  # type: ignore[reportRedeclaration]
@@ -252,7 +253,8 @@ class Twist3d(AbstractTangentVector[Isometry3d]):
     def __truediv__(self, other: ArrayLike) -> Twist3d:
         return Twist3d(self.point, self.value / other)
 
-    __rtruediv__ = __truediv__
+    def __rtruediv__(self, other: ArrayLike) -> Twist3d:
+        return Twist3d(self.point, other / self.value)
 
     def __repr__(self) -> str:
         repr = np.array2string(cast(np.ndarray, self.value), prefix="Twist3d(")
@@ -339,7 +341,8 @@ class Wrench3d(AbstractCotangentVector[Isometry3d]):
     def __sub__(self, other: ArrayLike) -> Wrench3d:
         return Wrench3d(self.point, self.value - other)
 
-    __rsub__ = __sub__
+    def __rsub__(self, other: ArrayLike) -> Wrench3d:
+        return Wrench3d(self.point, other - self.value)
 
     @dispatch
     def __mul__(self, other: Wrench3d) -> Wrench3d:  # type: ignore[reportRedeclaration]
@@ -359,7 +362,8 @@ class Wrench3d(AbstractCotangentVector[Isometry3d]):
     def __truediv__(self, other: ArrayLike) -> Wrench3d:
         return Wrench3d(self.point, self.value / other)
 
-    __rtruediv__ = __truediv__
+    def __rtruediv__(self, other: ArrayLike) -> Wrench3d:
+        return Wrench3d(self.point, other / self.value)
 
     def __repr__(self) -> str:
         repr = np.array2string(cast(np.ndarray, self.value), prefix="Wrench3d(")

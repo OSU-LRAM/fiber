@@ -20,11 +20,11 @@
 
 import functools
 
-import jax
 import jax.numpy as jnp
 from jaxtyping import Array
 
-from ..._vecfuncs import softclip, softnorm, vex3
+from ..._coefficients import cosc, dlogc, sinc, sinc3
+from ..._vecfuncs import skew3, vex3
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
@@ -49,7 +49,7 @@ def dadj(w: Array, p: Array):
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def dadj_op(w: Array) -> Array:
-    return -adj_op(w).T
+    return adj_op(w).T
 
 
 @functools.partial(jnp.vectorize, signature="(n,n),(n)->(n)")
@@ -89,7 +89,7 @@ def dAdj(g: Array, p: Array) -> Array:
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def dAdj_op(g: Array) -> Array:
-    return Adj_op(inv(g)).T
+    return Adj_op(g).T
 
 
 @functools.partial(jnp.vectorize, signature="(n,n),(n)->(n)")
@@ -104,70 +104,43 @@ def dAdj_inv_op(g: Array) -> Array:
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def expm(w: Array) -> Array:
-    theta = softnorm(vex3(w))
-    sin = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 1 - (theta**2 / 6) + (theta**4 / 120),
-        lambda: jnp.sin(theta) / theta,
-    )
-    cos = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 0.5 - (theta**2 / 24) + (theta**4 / 720),
-        lambda: (1 - jnp.cos(theta)) / (theta**2),
-    )
-    return jnp.eye(3) + sin * w + cos * (w @ w)
+    theta2 = jnp.sum(vex3(w) ** 2)
+    return jnp.eye(3) + sinc(theta2) * w + cosc(theta2) * (w @ w)
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def dexpm(w: Array) -> Array:
-    theta = softnorm(vex3(w))
-    a = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 1 - (theta**2 / 6) + (theta**4 / 120),
-        lambda: jnp.sin(theta) / theta,
-    )
-    b = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 0.5 - (theta**2 / 24) + (theta**4 / 720),
-        lambda: (1 - jnp.cos(theta)) / (theta**2),
-    )
-    c = (1 - a) / (theta**2)
-    return jnp.eye(3) + b * w + c * (w @ w)
+    theta2 = jnp.sum(vex3(w) ** 2)
+    return jnp.eye(3) + cosc(theta2) * w + sinc3(theta2) * (w @ w)
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def logm(g: Array) -> Array:
-    cos = (jnp.trace(g) - 1) / 2
-    cos = softclip(cos, -1, 1)
-    theta = jnp.arccos(cos)
-    w_hat = jnp.zeros((3, 3))
-    return jax.lax.cond(
-        jnp.sin(theta) < 1e-6,
-        lambda: w_hat,
-        lambda: 0.5 * theta / jnp.sin(theta) * (g - g.T),
+    cos = jnp.clip(0.5 * (jnp.trace(g) - 1), -1.0, 1.0)
+    sin_axis = 0.5 * vex3(g - g.T)
+    sin2 = jnp.sum(sin_axis**2)
+
+    # guard the square root so its gradient stays finite at the identity
+    sin = jnp.where(sin2 > 0.0, jnp.sqrt(jnp.where(sin2 > 0.0, sin2, 1.0)), 0.0)
+    theta = jnp.arctan2(sin, cos)
+
+    # past pi / 2 the skew part loses the axis, so recover it from the symmetric part
+    obtuse = cos < 0.0
+    outer = (0.5 * (g + g.T) - cos * jnp.eye(3)) / jnp.where(obtuse, 1 - cos, 1.0)
+    i = jnp.argmax(jnp.diag(outer))
+    axis = outer[:, i] / jnp.sqrt(jnp.where(obtuse, outer[i, i], 1.0))
+    axis = jnp.where(axis @ sin_axis < 0.0, -axis, axis)
+
+    w = jnp.where(
+        obtuse, theta * axis, sin_axis / sinc(jnp.where(obtuse, 0.0, theta**2))
     )
+    return skew3(w)
 
 
 @functools.partial(jnp.vectorize, signature="(n,n)->(n,n)")
 def dlogm(w: Array) -> Array:
-    theta = softnorm(vex3(w))
-    cos = jnp.cos(theta)
-    a = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 1 - (theta**2 / 6) + (theta**4 / 120),
-        lambda: jnp.sin(theta) / theta,
-    )
-    b = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: 0.5 - (theta**2 / 24) + (theta**4 / 720),
-        lambda: (1 - cos) / (theta**2),
-    )
-    e = jax.lax.cond(
-        jnp.isclose(theta, 0.0),  # type: ignore
-        lambda: (1 / 12) + (theta**2 / 720),
-        lambda: (b - 0.5 * a) / (1 - cos),
-    )
-    return jnp.eye(3) - 0.5 * w + e * (w @ w)
+    theta2 = jnp.sum(vex3(w) ** 2)
+    return jnp.eye(3) - 0.5 * w + dlogc(theta2) * (w @ w)
 
 
 @functools.partial(jnp.vectorize, signature="(n,n),(n,n)->(n,n)")
